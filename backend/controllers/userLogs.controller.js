@@ -17,23 +17,19 @@ export const getUserLogs = async (req, res) => {
  * ============================ */
 export const createUserLog = async (req, res) => {
   try {
-    const { userId, userName, role, activity, status, loginTime, logoutTime, ip } = req.body;
+    const { userId, userName, role, event, additional } = req.body;
 
     const newLog = await UserLog.create({
       userId,
       userName,
       role,
-      activity,
-      status,
-      loginTime,
-      logoutTime,
-      ip,
+      event,        // e.g., "User logged in" / "User logged out"
+      additional,   // e.g., "IP: 127.0.0.1"
+      dateTime: new Date(),
     });
 
-    console.log("✅ New log created:", newLog._id);
-    res.status(201).json({ message: "Log entry created successfully", log: newLog });
+    res.status(201).json({ message: "Log created", log: newLog });
   } catch (error) {
-    console.error("❌ Error creating user log:", error.message);
-    res.status(500).json({ message: "Error creating user log", error });
+    res.status(500).json({ message: "Error creating log", error });
   }
 };

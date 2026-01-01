@@ -25,13 +25,14 @@ import SuppliesMovements from "../components/SuppliesMovements";
 import SuppliesManagement from "../components/SuppliesManagement";
 import Assets from "../components/Assets";
 
-import { NAV_ITEMS } from "../constants/dashboardNavItems.js";
+import { NAV_BY_ROLE } from "../constants/dashboardNavItems.js";
 
 const roleDisplayMap = {
   admin: "ADMINISTRATOR",
-  staff: "INVENTORY PERSONNEL",
-  personnel: "PROJECT PERSONNEL",
+  management: "MANAGEMENT PERSONNEL",
+  inventory: "INVENTORY PERSONNEL",
 };
+
 
 const Dashboard = () => {
   const { user, checkingAuth } = useUserStore();
@@ -39,6 +40,10 @@ const Dashboard = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeContent, setActiveContent] = useState("Dashboard");
   const [clock, setClock] = useState("");
+  
+  const NAV_ITEMS = (NAV_BY_ROLE[user?.role] || []).sort((a, b) =>
+    a.label.localeCompare(b.label)
+  );
 
   // 🔹 Auth guard
   if (checkingAuth) {
@@ -125,9 +130,21 @@ const Dashboard = () => {
         return (
           <div className="space-y-6 max-w-300 mx-auto">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-              <KpiCard label="INBOUND STOCK" value={inboundStock} color="bg-green-500" />
-              <KpiCard label="OUTBOUND STOCK" value={outboundStock} color="bg-red-500" />
-              <KpiCard label="RESERVE STOCK" value={reserveStock} color="bg-yellow-500" />
+              <KpiCard
+                label="INBOUND STOCK"
+                value={inboundStock}
+                color="bg-green-500"
+              />
+              <KpiCard
+                label="OUTBOUND STOCK"
+                value={outboundStock}
+                color="bg-red-500"
+              />
+              <KpiCard
+                label="RESERVE STOCK"
+                value={reserveStock}
+                color="bg-yellow-500"
+              />
             </div>
             <StockChart />
           </div>
@@ -137,7 +154,11 @@ const Dashboard = () => {
 
   const KpiCard = ({ label, color, value }) => (
     <div className="bg-white rounded-xl shadow border border-gray-200 p-6 flex flex-col items-center justify-center space-y-2">
-      <div className={`text-sm font-semibold text-white px-4 py-1 rounded-full ${color}`}>{label}</div>
+      <div
+        className={`text-sm font-semibold text-white px-4 py-1 rounded-full ${color}`}
+      >
+        {label}
+      </div>
       <div className="text-4xl font-bold text-gray-800 pt-2">{value}</div>
       <div className="text-sm text-gray-500">Stored Records</div>
     </div>
@@ -146,26 +167,45 @@ const Dashboard = () => {
   return (
     <div className="flex h-screen bg-gray-100 text-gray-900">
       {mobileOpen && (
-        <div className="fixed inset-0 bg-black/40 z-20 md:hidden" onClick={() => setMobileOpen(false)} />
+        <div
+          className="fixed inset-0 bg-black/40 z-20 md:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
       )}
 
       {/* Sidebar */}
       <motion.aside
         className={`fixed inset-y-0 md:relative z-30 bg-[#010197] text-white flex flex-col transition-all duration-300 ease-in-out
           ${collapsed ? "w-20" : "w-64"}
-          ${mobileOpen ? "translate-x-0 left-0 w-[60%] shadow-2xl p-6" : "-translate-x-full md:translate-x-0 md:p-4"} h-screen`}
+          ${
+            mobileOpen
+              ? "translate-x-0 left-0 w-[60%] shadow-2xl p-6"
+              : "-translate-x-full md:translate-x-0 md:p-4"
+          } h-screen`}
       >
         {/* Logo */}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3 overflow-hidden">
-            <img src="/updated logo.png" alt="Racksmart Logo" className="w-12 h-12 rounded-lg" />
+            <img
+              src="/updated logo.png"
+              alt="Racksmart Logo"
+              className="w-12 h-12 rounded-lg"
+            />
             {!collapsed && <h1 className="text-xl font-bold">RACKSMART</h1>}
           </div>
           <button
-            onClick={() => (mobileOpen ? setMobileOpen(false) : setCollapsed(!collapsed))}
+            onClick={() =>
+              mobileOpen ? setMobileOpen(false) : setCollapsed(!collapsed)
+            }
             className="md:absolute top-6 -right-3 bg-[#ff751f] hover:bg-[#e46b1d] p-1 rounded-full shadow-md transition text-white"
           >
-            {mobileOpen ? <X size={20} /> : collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+            {mobileOpen ? (
+              <X size={20} />
+            ) : collapsed ? (
+              <ChevronRight size={20} />
+            ) : (
+              <ChevronLeft size={20} />
+            )}
           </button>
         </div>
         <div className="my-3 border-t border-blue-800 opacity-60" />
@@ -176,7 +216,11 @@ const Dashboard = () => {
             {NAV_ITEMS.map(({ label, icon, isHeader }) => (
               <li key={label}>
                 {isHeader ? (
-                  <span className={`block px-3 py-2 text-gray-400 uppercase font-bold text-xs ${collapsed ? "hidden" : "text-sm"}`}>
+                  <span
+                    className={`block px-3 py-2 text-gray-400 uppercase font-bold text-xs ${
+                      collapsed ? "hidden" : "text-sm"
+                    }`}
+                  >
                     {label}
                   </span>
                 ) : (
@@ -186,12 +230,19 @@ const Dashboard = () => {
                       setMobileOpen(false);
                     }}
                     className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-left text-sm font-medium transition-colors duration-200 ${
-                      activeContent === label ? "bg-white text-[#010197]" : "text-white hover:bg-blue-800 hover:text-white"
+                      activeContent === label
+                        ? "bg-white text-[#010197]"
+                        : "text-white hover:bg-blue-800 hover:text-white"
                     }`}
                   >
-                    {icon && <span className="text-lg">{React.createElement(icon)}</span>}
-
-                    {!collapsed && <span className="truncate text-sm">{label}</span>}
+                    {icon && (
+                      <span className="text-lg">
+                        {React.createElement(icon)}
+                      </span>
+                    )}
+                    {!collapsed && (
+                      <span className="truncate text-sm">{label}</span>
+                    )}
                   </button>
                 )}
               </li>
@@ -200,12 +251,24 @@ const Dashboard = () => {
         </nav>
 
         {/* User Info */}
-        <div className={`border-t border-blue-800 pt-4 mt-4 flex items-center ${collapsed ? "justify-center" : "gap-3 px-3"}`}>
-          <img src={userAvatar} alt="Profile" className="w-10 h-10 rounded-full object-cover border-2 border-white" />
+        <div
+          className={`border-t border-blue-800 pt-4 mt-4 flex items-center ${
+            collapsed ? "justify-center" : "gap-3 px-3"
+          }`}
+        >
+          <img
+            src={userAvatar}
+            alt="Profile"
+            className="w-10 h-10 rounded-full object-cover border-2 border-white"
+          />
           {!collapsed && (
             <div className="leading-tight">
-              <p className="text-sm font-semibold text-white truncate">{userFullName}</p>
-              <p className="text-xs uppercase tracking-wide text-blue-200">{userRole}</p>
+              <p className="text-sm font-semibold text-white truncate">
+                {userFullName}
+              </p>
+              <p className="text-xs uppercase tracking-wide text-blue-200">
+                {userRole}
+              </p>
             </div>
           )}
         </div>
@@ -214,7 +277,10 @@ const Dashboard = () => {
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-y-auto">
         <div className="flex items-center justify-between bg-white text-gray-800 shadow p-4 sticky top-0 z-10">
-          <button onClick={() => setMobileOpen(true)} className="md:hidden p-2 rounded hover:bg-gray-100">
+          <button
+            onClick={() => setMobileOpen(true)}
+            className="md:hidden p-2 rounded hover:bg-gray-100"
+          >
             <Menu className="w-5 h-5 text-gray-700" />
           </button>
           <span className="text-sm text-gray-700 font-bold">{clock}</span>
@@ -223,7 +289,8 @@ const Dashboard = () => {
         <div className="p-6 flex-1">{renderContent()}</div>
 
         <footer className="w-full text-center py-4 text-sm font-medium border-t shadow-sm bg-white text-gray-500">
-          Copyright © {new Date().getFullYear()} Upright Storage Solutions PH. All Rights Reserved.
+          Copyright © {new Date().getFullYear()} Upright Storage Solutions PH.
+          All Rights Reserved.
         </footer>
       </main>
     </div>

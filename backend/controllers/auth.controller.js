@@ -298,14 +298,30 @@ export const login = async (req, res) => {
           role: user.role,
           isActive: user.isActive,
         },
-        requiresVerification: true, // frontend can redirect to CodeVerification
+        requiresVerification: true,
       });
     }
 
-    // If already verified, generate tokens
-    const { accessToken, refreshToken } = generateTokens(user._id);
-    await storeRefreshToken(user._id, refreshToken);
-    setCookies(res, accessToken, refreshToken);
+    // Generate tokens
+    const accessToken = jwt.sign({ userId: user._id }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "15m" });
+    const refreshToken = jwt.sign({ userId: user._id }, process.env.REFRESH_TOKEN_SECRET, { expiresIn: "7d" });
+
+    // Store refresh token
+    await redis.set(`refresh_token:${user._id}`, refreshToken, "EX", 7 * 24 * 60 * 60);
+
+    // Set cookies
+    res.cookie("accessToken", accessToken, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "strict", maxAge: 15 * 60 * 1000 });
+    res.cookie("refreshToken", refreshToken, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "strict", maxAge: 7 * 24 * 60 * 60 * 1000 });
+
+    // ✅ Create a new log row for login
+    await UserLog.create({
+      userId: user._id,
+      userName: user.fullName || user.username,
+      role: user.role,
+      event: "User logged in",
+      additional: `IP: ${req.ip || req.headers["x-forwarded-for"] || "N/A"}`,
+      dateTime: new Date(),
+    });
 
     res.json({
       message: "Login successful",
@@ -321,23 +337,24 @@ export const login = async (req, res) => {
 export const logout = async (req, res) => {
   try {
     const refreshToken = req.cookies.refreshToken;
+
     if (refreshToken) {
-      const decoded = jwt.verify(
-        refreshToken,
-        process.env.REFRESH_TOKEN_SECRET
-      );
-      const latestLog = await UserLog.findOne({
+      const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+
+      // ✅ Create a new log row for logout
+      await UserLog.create({
         userId: decoded.userId,
-        status: "Logged In",
-      }).sort({ loginTime: -1 });
-      if (latestLog) {
-        latestLog.status = "Logged Out";
-        latestLog.activity = "Logged Out";
-        latestLog.logoutTime = new Date();
-        await latestLog.save();
-      }
+        userName: decoded.userName || "Unknown",
+        role: decoded.role || "Unknown",
+        event: "User logged out",
+        additional: `IP: ${req.ip || req.headers["x-forwarded-for"] || "N/A"}`,
+        dateTime: new Date(),
+      });
+
+      // Delete refresh token
       await redis.del(`refresh_token:${decoded.userId}`);
     }
+
     res.clearCookie("accessToken");
     res.clearCookie("refreshToken");
     res.json({ message: "Logged out successfully" });

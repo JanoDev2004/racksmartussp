@@ -1,4 +1,3 @@
-// src/constants/dashboardNavItems.js
 import {
   LayoutDashboard,
   Settings,
@@ -17,27 +16,31 @@ import {
   BarChart3,
 } from "lucide-react";
 
-export const NAV_ITEMS = [
+// Common for all roles
+export const COMMON_NAV = [
   { label: "Dashboard", icon: LayoutDashboard },
   { label: "Setting", icon: Settings },
   { label: "Product", icon: Package },
   { label: "Report", icon: FileText },
+];
 
-  { label: "ADMIN", isHeader: true },
-
+// Admin-specific
+export const ADMIN_NAV = [
   { label: "Announcement", icon: Bell },
   { label: "User Activity", icon: BarChart3 },
   { label: "User Management", icon: Users },
+];
 
-  { label: "MANAGEMENT", isHeader: true },
-
+// Management-specific
+export const MANAGEMENT_NAV = [
   { label: "Supplier", icon: Truck },
   { label: "Customer", icon: Users },
   { label: "Inbound Record", icon: ClipboardList },
   { label: "Outbound Record", icon: ClipboardList },
+];
 
-  { label: "INVENTORY", isHeader: true },
-
+// Inventory-specific
+export const INVENTORY_NAV = [
   { label: "Inbound Stock", icon: ArrowDownToLine },
   { label: "Outbound Stock", icon: ArrowUpFromLine },
   { label: "Reserve Stock", icon: Archive },
@@ -46,3 +49,10 @@ export const NAV_ITEMS = [
   { label: "Supplies Management", icon: Package },
   { label: "Assets", icon: Building2 },
 ];
+
+// Map roles to nav arrays
+export const NAV_BY_ROLE = {
+  admin: [...COMMON_NAV, ...ADMIN_NAV],
+  management: [...COMMON_NAV, ...MANAGEMENT_NAV],
+  inventory: [...COMMON_NAV, ...INVENTORY_NAV],
+};
