@@ -4,99 +4,62 @@ import { toast } from "react-hot-toast";
 
 export const useUserStore = create((set, get) => ({
   user: null,
-  pendingUser: null,
-  requiresVerification: false,
   loading: false,
   checkingAuth: true,
 
-  // Send verification code
-  sendVerificationCode: async (email) => {
-    try {
-      await axios.post("/auth/send-code", { email });
-      toast.success("Verification code sent!");
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to send verification code");
-    }
-  },
-
-  // Verify code and set actual user
-  verifyCode: async (email, code) => {
-    try {
-      const res = await axios.post("/auth/verify-code", { email, code });
-      toast.success("Verification successful!");
-
-      // Move pendingUser → user
-      const finalUser = get().pendingUser;
-      set({
-        user: finalUser,
-        pendingUser: null,
-        requiresVerification: false,
-      });
-
-      return true;
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Invalid verification code");
-      return false;
-    }
-  },
-
+  // ================= SIGNUP =================
   signup: async (data) => {
-    set({ loading: true });
-    const { password, confirmPassword } = data;
+  set({ loading: true });
 
-    if (password !== confirmPassword) {
-      set({ loading: false });
-      return toast.error("Passwords do not match");
-    }
+  const { password, confirmPassword } = data;
+  if (password !== confirmPassword) {
+    set({ loading: false });
+    return toast.error("Passwords do not match");
+  }
 
-    try {
-      const res = await axios.post("/auth/signup", data);
-      set({ user: res.data, loading: false });
-      toast.success("Sign up successful!");
-    } catch (error) {
-      set({ loading: false });
-      toast.error(error.response?.data?.message || "An error occurred");
-    }
-  },
+  try {
+    const res = await axios.post("/auth/signup", data);
+    set({ loading: false });
 
+    // ✅ Don't set user here, user is not verified yet
+    toast.success(
+      res.data.message ||
+        "Signup successful! Check your email to verify your account."
+    );
+  } catch (error) {
+    set({ loading: false });
+    toast.error(error.response?.data?.message || "Signup failed");
+  }
+},
+
+  // ================= LOGIN =================
   login: async (email, password) => {
     set({ loading: true });
     try {
       const res = await axios.post("/auth/login", { email, password });
-
-      if (res.data.requiresVerification) {
-        set({
-          pendingUser: res.data.user,
-          requiresVerification: true,
-          loading: false,
-        });
-
-        toast.success("Verification code sent! Check your email.");
-        return { requiresVerification: true };
-      }
-
       set({ user: res.data.user, loading: false });
       toast.success("Login successful!");
-      return { requiresVerification: false };
+      return true;
     } catch (error) {
       set({ loading: false });
       toast.error(error.response?.data?.message || "Invalid email or password");
-      return { requiresVerification: false };
+      return false;
     }
   },
 
+  // ================= LOGOUT =================
   logout: async () => {
     try {
       await axios.post("/auth/logout");
-      set({ user: null, pendingUser: null, requiresVerification: false });
+      set({ user: null });
       toast.success("Logged out successfully");
       window.location.href = "/login";
     } catch (error) {
-      toast.error(error.response?.data?.message || "An error occurred during logout");
+      toast.error(error.response?.data?.message || "Logout failed");
     }
   },
 
-  // Check if user is already logged in
+  // ================= CHECK AUTH =================
   checkAuth: async () => {
     set({ checkingAuth: true });
     try {
@@ -107,15 +70,14 @@ export const useUserStore = create((set, get) => ({
     }
   },
 
-  // Refresh token logic
+  // ================= REFRESH TOKEN =================
   refreshToken: async () => {
     if (get().checkingAuth) return;
 
     set({ checkingAuth: true });
     try {
-      const res = await axios.post("/auth/refresh-token");
+      await axios.post("/auth/refresh-token");
       set({ checkingAuth: false });
-      return res.data;
     } catch (error) {
       set({ user: null, checkingAuth: false });
       throw error;

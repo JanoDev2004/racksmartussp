@@ -1,6 +1,8 @@
 import User from "../models/user.model.js";
 import { sendEmail } from "../lib/emailService.js";
 import dotenv from "dotenv";
+import crypto from "crypto";
+import { generateVerificationToken } from "../controllers/auth.controller.js"; // reuse function
 
 dotenv.config();
 
@@ -34,71 +36,47 @@ export const createUser = async (req, res) => {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    // 🧠 Use password from frontend OR generate one if missing
+    const normalizedEmail = email.toLowerCase().trim();
     const password = rawPassword || generateStrongPassword();
 
-    // 🗂️ Save user in DB
+    // ✅ Generate verification token
+    const { token, expires } = generateVerificationToken();
+
     const newUser = await User.create({
       username,
       fullName,
-      email,
+      email: normalizedEmail,
       department,
       phone,
       role,
       password,
+      isActive: true,
+      isVerified: false,
+      verificationToken: token,
+      verificationTokenExpires: expires,
     });
 
-    // 📧 Send credentials via email
+    // Verification link points directly to backend
+    const verificationLink = `http://localhost:5000/api/auth/verify-email?token=${token}&id=${newUser._id}`;
+
     const html = `
-      <div style="font-family: Arial, sans-serif; color: #24292e; background-color: #ffffff; padding: 40px 0; text-align: center;">
-        <div style="max-width: 600px; margin: auto; background: #ffffff; border-radius: 6px; border: 1px solid #d0d7de; padding: 40px;">
-
-          <!-- Logo -->
-          <img src="https://yourdomain.com/public/updated-logo.png" alt="RackSmart Logo" style="height: 60px; margin-bottom: 20px;" />
-
-          <!-- Title -->
-          <h2 style="color: #1800ad; font-weight: 600; margin-bottom: 10px;">Welcome to RackSmart!</h2>
-
-          <!-- Message -->
-          <p style="font-size: 15px; color: #24292e;">
-            Hi <strong>${fullName}</strong>,
-          </p>
-          <p style="font-size: 15px; color: #24292e;">
-            Your RackSmart account has been created successfully.
-          </p>
-
-          <!-- Credentials Box -->
-          <div style="border: 1px solid #1800ad; background: #f5f6ff; padding: 16px; border-radius: 8px; margin: 24px 0; text-align: left;">
-            <p style="margin: 6px 0; font-size: 15px;"><strong>Email:</strong> ${email}</p>
-            <p style="margin: 6px 0; font-size: 15px;"><strong>Password:</strong> ${password}</p>
-          </div>
-
-          <p style="font-size: 14px; color: #57606a;">
-            For your security, please change your password after logging in.
-          </p>
-
-          <p style="font-size: 14px; color: #57606a; margin-top: 30px;">
-            <b>The RackSmart Team</b>
-          </p>
-
-          <hr style="margin: 30px 0; border: none; border-top: 1px solid #d8dee4;" />
-
-          <!-- Footer -->
-          <p style="font-size: 12px; color: #6e7781;">
-            You’re receiving this email because an account was created for you in the RackSmart system.
-            If this wasn’t you, please contact your administrator immediately.
-          </p>
-
-          <p style="font-size: 11px; color: #8c959f; margin-top: 10px;">
-            RackSmart Upright Storage Solutions · Philippines
-          </p>
-        </div>
+      <div style="font-family: Arial, sans-serif; text-align:center; padding:40px;">
+        <h2 style="color:#1800ad;">Welcome to RackSmart</h2>
+        <p>Hi <strong>${fullName}</strong>,</p>
+        <p>Your account has been created. Click below to verify your email:</p>
+        <a href="${verificationLink}" style="display:inline-block; background:#1800ad; color:#fff; text-decoration:none; padding:12px 32px; border-radius:6px;">Verify Email</a>
+        <p>Your temporary password is: <strong>${password}</strong></p>
       </div>
     `;
 
-    await sendEmail(email, "Your RackSmart Account Credentials", html);
+    const text = `Hi ${fullName},\nYour account has been created.\nPassword: ${password}\nVerify email: ${verificationLink}`;
 
-    res.status(201).json(newUser);
+    await sendEmail(normalizedEmail, "Verify your RackSmart account", html, text);
+
+    res.status(201).json({
+      message: "User created successfully. Verification email sent.",
+      user: newUser,
+    });
   } catch (error) {
     console.error("Error creating user:", error);
     res.status(400).json({ message: error.message });

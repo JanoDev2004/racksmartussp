@@ -44,9 +44,14 @@ const userSchema = new mongoose.Schema(
       enum: ["admin", "inventory", "management"],
       default: "inventory",
     },
+    
+     // New email verification fields
+    isVerified: { type: Boolean, default: false },
+    verificationToken: String,
+    verificationTokenExpires: Date,
+
     resetPasswordToken: String,
     resetPasswordExpires: Date,
-    isVerified: { type: Boolean, default: false },
   },
   {
     timestamps: true, // createdAt and updatedAt

@@ -8,17 +8,14 @@ import {
   changePassword,
   refreshToken,
   getProfile,
-  sendVerificationCode,
-  verifyCode,
+  verifyEmail,
 } from "../controllers/auth.controller.js"; // 👈 your existing controller file
 
 import { protectRoute } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-// ✅ Add new verification routes
-router.post("/send-code", sendVerificationCode);
-router.post("/verify-code", verifyCode);
+router.get("/verify-email", verifyEmail);
 
 // ✅ Existing routes
 router.post("/signup", signup);

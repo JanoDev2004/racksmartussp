@@ -1,231 +1,238 @@
-import React, { useState, useMemo } from "react";
-import { Search, History, MapPin, Package, X } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { History, X } from "lucide-react";
+import PageHeader from "../components/PageHeader";
+import { useInboundStore } from "../stores/useInboundStore";
 
 const Supplier = () => {
-  const [suppliers] = useState([
-    {
-      id: "0001",
-      name: "Global Steel Industrial",
-      contact: "Juan Dela Cruz",
-      address: "Warehouse 12, Navotas Port, Manila",
-      email: "sales@globalsteel.ph",
-      transactions: [
-        {
-          code: "PRD-001",
-          category: "Rack",
-          description: "Steel Rack 5x5",
-          qty: 10,
-          uom: "pcs",
-          price: 1500,
-        },
-        {
-          code: "PRD-002",
-          category: "Rack",
-          description: "Heavy Duty Shelf",
-          qty: 5,
-          uom: "pcs",
-          price: 3200,
-        },
-      ],
-    },
-    {
-      id: "0002",
-      name: "Smart Office Solutions",
-      contact: "Maria Santos",
-      address: "BGC Corporate Center, Taguig",
-      email: "maria@smartofficen.ph",
-      transactions: [
-        {
-          code: "PRD-010",
-          category: "Consumables",
-          description: "Tape Roll 1 inch",
-          qty: 50,
-          uom: "pcs",
-          price: 45,
-        },
-      ],
-    },
-  ]);
+  const { inboundRecords, fetchInboundRecords, loading } = useInboundStore();
 
-  const [selectedSupplier, setSelectedSupplier] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [searchTerm, setSearchTerm] = useState(""); // Supplier filter
+  const [poSearch, setPoSearch] = useState(""); // PO Number filter
 
-  const filteredSuppliers = useMemo(() => {
-    return suppliers.filter((s) =>
-      s.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [suppliers, searchTerm]);
+  // ================= FETCH DATA =================
+  useEffect(() => {
+    fetchInboundRecords();
+  }, [fetchInboundRecords]);
+
+  // ================= CONFIRMED ONLY =================
+  const confirmedInbound = useMemo(() => {
+    return inboundRecords.filter((r) => r.status === "Posted");
+  }, [inboundRecords]);
+
+  // ================= UNIQUE SUPPLIERS =================
+  const suppliers = useMemo(() => {
+    return [...new Set(confirmedInbound.map((r) => r.supplier).filter(Boolean))];
+  }, [confirmedInbound]);
+
+  // ================= FILTER BY SUPPLIER + PO =================
+  const filteredInbound = useMemo(() => {
+    return confirmedInbound.filter((r) => {
+      const supplierMatch = searchTerm ? r.supplier === searchTerm : true;
+      const poMatch = poSearch
+        ? r.poNumber?.toLowerCase().includes(poSearch.toLowerCase())
+        : true;
+      return supplierMatch && poMatch;
+    });
+  }, [confirmedInbound, searchTerm, poSearch]);
+
+  // ================= RECENT (LAST 4 CONFIRMED) =================
+  const recentInbound = useMemo(() => {
+    return confirmedInbound.slice(0, 4);
+  }, [confirmedInbound]);
 
   return (
-    <main className="px-4 md:px-6 py-6 font-sans bg-gray-100 min-h-screen">
+    <main className="px-4 md:px-6 py-6 bg-gray-100 min-h-screen">
+      <PageHeader pageName="Supplier" />
 
-      {/* HEADER */}
-            <div className="bg-white p-6 rounded-xl shadow mb-6">
-                <h1 className="text-xl font-semibold text-gray-800">
-                    RACKSMART – Supplier Directory
-                </h1>
-                <p className="text-gray-500 text-sm">
-          Manage all supplier transactions efficiently.
-                </p>
-
-                {/* Instruction Box */}
-                <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg shadow mt-4">
-          <p className="text-blue-900 text-sm font-bold">Guidelines:</p>
-                    <ul className="list-disc list-inside text-blue-900 text-sm space-y-1">
-                        <li>Keep supplier contact information updated for seamless communication.</li>
-      <li>Verify tax identification numbers and business permits for compliance.</li>
-      <li>Document all transactions and lead times to monitor supplier performance.</li>
-      <li>Categorize suppliers correctly to streamline the procurement process.</li>
-                    </ul>
-                </div>
-            </div>
-
-      {/* ================= CARDS CONTAINER ================= */}
+      {/* ================= RECENT CONFIRMED ================= */}
       <div className="bg-white p-6 rounded-xl shadow mb-6">
-        <h5 className="text-gray-700 font-bold border-b border-gray-200 pb-1 mb-4">
-          Recent Supplier Transacrion
+        <h5 className="font-bold text-gray-700 border-b pb-1 mb-4">
+          Recent Supplier Transactions
         </h5>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {suppliers.map((s) => (
-            <div
-              key={s.id}
-              className="border border-gray-200 rounded-lg p-4 hover:shadow transition"
-            >
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-bold text-gray-800">{s.name}</h3>
-                  <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                    <MapPin size={12} /> {s.address}
+        {recentInbound.length === 0 ? (
+          <p className="text-center text-gray-400 py-10 text-sm">
+            No confirmed supplier transactions yet
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {recentInbound.map((pl) => (
+              <div
+                key={pl._id}
+                className="border rounded-lg p-4 hover:shadow transition"
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-bold text-gray-800">{pl.supplier}</h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Delivery Date:{" "}
+                      {pl.deliveryDate
+                        ? new Date(pl.deliveryDate).toLocaleString("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })
+                        : "—"}
+                    </p>
+                    <p className="text-xs text-gray-500">Container #{pl.containerNumber}</p>
+                  </div>
+
+                  <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded">
+                    PO #{pl.poNumber}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center mt-4">
+                  <p className="text-xs text-gray-500">
+                    Items: <b>{pl.items.length}</b>
                   </p>
                 </div>
-                <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
-                  ID {s.id}
-                </span>
               </div>
-
-              <div className="flex justify-between items-center mt-4">
-                <p className="text-xs text-gray-500">
-                  Products: <b>{s.transactions.length}</b>
-                </p>
-                <button
-                  onClick={() => setSelectedSupplier(s)}
-                  className="flex items-center gap-1 text-sm font-bold text-[#010197] hover:underline"
-                >
-                  <History size={14} /> View History
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* ================= TABLE CONTAINER ================= */}
+      {/* ================= TOTAL CONFIRMED ================= */}
       <div className="bg-white p-6 rounded-xl shadow">
-        <h5 className="text-gray-700 font-bold border-b border-gray-200 pb-1 mb-4">
-          Total Supplier Transacrion
+        <h5 className="font-bold text-gray-700 border-b pb-1 mb-4">
+          Total Supplier Transactions
         </h5>
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
 
-          <div className="flex flex-col">
-              <label className="text-[14px] font-bold text-gray-400  mb-1">Supplier</label>
-              
-              <input
-              type="text"
+        {/* Supplier + PO Filters */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          {/* Supplier Dropdown */}
+          <div>
+            <label className="text-sm font-bold text-gray-400">Supplier</label>
+            <select
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-                className="border border-gray-300 rounded-md px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              className="mt-1 border rounded-md px-3 py-1.5 w-full text-sm"
+            >
+              <option value="">All Suppliers</option>
+              {suppliers.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* PO Number Input */}
+          <div>
+            <label className="text-sm font-bold text-gray-400">PO Number</label>
+            <input
+              type="text"
+              value={poSearch}
+              onChange={(e) => setPoSearch(e.target.value)}
+              className="mt-1 border rounded-md px-3 py-1.5 w-full text-sm"
+              placeholder="Search PO number..."
             />
-            </div>
+          </div>
         </div>
 
-        <div className="overflow-x-auto border border-gray-200 rounded-xl">
+        {/* Table */}
+        <div className="overflow-x-auto border rounded-xl">
           <table className="w-full text-sm">
             <thead className="bg-[#010197] text-white">
               <tr>
                 <th className="p-3 text-left">Supplier</th>
-                <th className="p-3 text-left">Contact</th>
-                <th className="p-3 text-left">Address</th>
-                <th className="p-3 text-center">Products</th>
+                <th className="p-3 text-left">PO Number</th>
+                <th className="p-3 text-left">Delivery Date</th>
+                <th className="p-3 text-left">Status</th>
+                <th className="p-3 text-center">Items</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filteredSuppliers.map((s) => (
-                <tr
-                  key={s.id}
-                  className="odd:bg-white even:bg-gray-50 hover:bg-blue-50 transition"
-                >
-                  <td className="p-4 font-semibold text-gray-800">{s.name}</td>
-                  <td className="p-4 text-gray-600">{s.contact}</td>
-                  <td className="p-4 text-gray-500 text-xs">{s.address}</td>
-                  <td className="p-4 text-center">
-                    <button
-                      onClick={() => setSelectedSupplier(s)}
-                      className="text-sm font-bold text-blue-600 hover:underline"
-                    >
-                      View
-                    </button>
+            <tbody className="divide-y">
+              {filteredInbound.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="text-center py-10 text-gray-400">
+                    No confirmed transactions found
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredInbound.map((r) => (
+                  <tr key={r._id} className="hover:bg-blue-50">
+                    <td className="p-4 font-semibold">{r.supplier}</td>
+                    <td className="p-4">{r.poNumber}</td>
+                    <td className="p-4 text-sm text-gray-600">
+                      {r.deliveryDate
+                        ? new Date(r.deliveryDate).toLocaleString("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })
+                        : "—"}
+                    </td>
+                    <td className="p-4 text-xs font-bold text-green-600">
+                      CONFIRMED
+                    </td>
+                    <td className="p-4 text-center">
+                      <button
+                        onClick={() => setSelectedRecord(r)}
+                        className="font-bold text-blue-600"
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* ================= PRODUCT HISTORY MODAL ================= */}
-      {selectedSupplier && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-          <div className="bg-white w-full max-w-5xl rounded-xl shadow-xl overflow-hidden">
-
-            {/* Modal Header */}
-            <div className="p-5 border-b border-gray-200 flex justify-between items-center">
+      {/* ================= PACKING LIST MODAL ================= */}
+      {selectedRecord && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-5xl rounded-xl overflow-hidden">
+            <div className="p-5 border-b flex justify-between items-center">
               <div>
-                <h3 className="font-bold text-lg text-gray-800">
-                  {selectedSupplier.name}
-                </h3>
+                <h3 className="font-bold text-lg">{selectedRecord.supplier}</h3>
+                <p className="text-xs text-gray-500">PO #{selectedRecord.poNumber}</p>
+                <p className="text-xs text-gray-500">Container #{selectedRecord.containerNumber}</p>
                 <p className="text-xs text-gray-500">
-                  Delivered Products
+                  Delivery Date:{" "}
+                  {selectedRecord.deliveryDate
+                    ? new Date(selectedRecord.deliveryDate).toLocaleString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })
+                    : "—"}
                 </p>
               </div>
-              <button
-                onClick={() => setSelectedSupplier(null)}
-                className="p-2 rounded-md hover:bg-gray-100"
-              >
-                <X size={18} />
+              <button onClick={() => setSelectedRecord(null)}>
+                <X />
               </button>
             </div>
 
-            {/* Product Table */}
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-900 text-white">
                   <tr>
-                    <th className="p-3 text-left">Code</th>
-                    <th className="p-3 text-left">Category</th>
+                    <th className="p-3 text-left">Item Code</th>
                     <th className="p-3 text-left">Description</th>
-                    <th className="p-3 text-center">Qty</th>
+                    <th className="p-3 text-left">Dimension</th>
+                    <th className="p-3 text-center">Qty (Confirmed)</th>
                     <th className="p-3 text-center">UOM</th>
-                    <th className="p-3 text-right">Price</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {selectedSupplier.transactions.map((t, i) => (
-                    <tr key={i} className="hover:bg-blue-50 transition">
-                      <td className="p-3 font-bold text-blue-700">{t.code}</td>
-                      <td className="p-3 text-gray-500">{t.category}</td>
-                      <td className="p-3 font-medium text-gray-800">{t.description}</td>
-                      <td className="p-3 text-center font-bold">{t.qty}</td>
-                      <td className="p-3 text-center uppercase text-gray-500">{t.uom}</td>
-                      <td className="p-3 text-right font-bold">
-                        ₱{t.price.toLocaleString()}
-                      </td>
+                <tbody className="divide-y">
+                  {selectedRecord.items.map((item, i) => (
+                    <tr key={i}>
+                      <td className="p-3 font-bold text-blue-700">{item.itemCode}</td>
+                      <td className="p-3">{item.itemDescription}</td>
+                      <td className="p-3">{item.dimension}</td>
+                      <td className="p-3 text-center font-bold">{item.actualQty ?? item.qty}</td>
+                      <td className="p-3 text-center">{item.uom}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-
           </div>
         </div>
       )}

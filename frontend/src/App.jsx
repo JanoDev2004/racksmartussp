@@ -9,7 +9,6 @@ import { Toaster } from "react-hot-toast";
 import ForgotPassPage from "./pages/ForgotPassPage";
 import ResetPassPage from "./pages/ResetPassPage";
 import FAQs from "./pages/FAQs";
-import CodeVerification from "./pages/CodeVerification"; // ✅ imported here
 
 const App = () => {
   const { user, checkingAuth, checkAuth } = useUserStore();
@@ -33,7 +32,6 @@ const App = () => {
         <Route path="/reset-password/:token" element={<ResetPassPage />} />
         <Route path="dashboard" element={!user ? <Index /> : <Dashboard />} />
         <Route path="FAQs" element={<FAQs />} />
-        <Route path="verify-code" element={<CodeVerification />} /> {/* ✅ added route */}
       </Routes>
     </div>
   );

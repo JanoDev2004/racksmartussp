@@ -34,55 +34,51 @@ const LoginPage = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (lockedUntil && Date.now() < lockedUntil) {
-      const minutesLeft = Math.ceil((lockedUntil - Date.now()) / 60000);
-      toast.error(`Too many attempts. Try again in ${minutesLeft} minute(s).`);
-      setTimeout(() => window.location.reload(), 1500);
+  if (lockedUntil && Date.now() < lockedUntil) {
+    const minutesLeft = Math.ceil((lockedUntil - Date.now()) / 60000);
+    toast.error(`Too many attempts. Try again in ${minutesLeft} minute(s).`);
+    setTimeout(() => window.location.reload(), 1500);
+    return;
+  }
+
+  try {
+    const success = await login(formData.email, formData.password);
+
+    if (success) {
+      toast.success("Login successful!");
+
+      // Reset attempt counters
+      localStorage.removeItem("loginAttempts");
+      localStorage.removeItem("lockedUntil");
+      setAttempts(0);
+      setLockedUntil(null);
+
+      // ✅ DIRECT REDIRECT TO DASHBOARD
+      navigate("/dashboard");
       return;
     }
 
-    try {
-      // login returns TRUE or FALSE
-      const success = await login(formData.email, formData.password);
+    // ❌ Login failed
+    const newAttempts = attempts + 1;
+    setAttempts(newAttempts);
+    localStorage.setItem("loginAttempts", newAttempts);
 
-      if (success) {
-        toast.success("Login successful! Verify the code sent to your email.");
-
-        // Reset attempt counters
-        localStorage.removeItem("loginAttempts");
-        localStorage.removeItem("lockedUntil");
-        setAttempts(0);
-        setLockedUntil(null);
-
-        // 👉 Redirect to verification page BEFORE dashboard
-        navigate("/verify-code", {
-          state: { email: formData.email },
-        });
-
-        return;
-      }
-
-      // If login failed
-      const newAttempts = attempts + 1;
-      setAttempts(newAttempts);
-      localStorage.setItem("loginAttempts", newAttempts);
-
-      if (newAttempts >= MAX_ATTEMPTS) {
-        const lockUntil = Date.now() + LOCK_TIME;
-        localStorage.setItem("lockedUntil", lockUntil);
-        setLockedUntil(lockUntil);
-        toast.error("Too many failed attempts! Locked for 10 minutes.");
-        setTimeout(() => window.location.reload(), 1500);
-      } else {
-        toast.error(`Attempt ${newAttempts}`);
-      }
-    } catch (error) {
-      console.error("Login error:", error);
-      toast.error("Something went wrong. Please try again.");
+    if (newAttempts >= MAX_ATTEMPTS) {
+      const lockUntil = Date.now() + LOCK_TIME;
+      localStorage.setItem("lockedUntil", lockUntil);
+      setLockedUntil(lockUntil);
+      toast.error("Too many failed attempts! Locked for 10 minutes.");
+      setTimeout(() => window.location.reload(), 1500);
+    } else {
+      toast.error(`Invalid credentials (Attempt ${newAttempts})`);
     }
-  };
+  } catch (error) {
+    console.error("Login error:", error);
+    toast.error("Something went wrong. Please try again.");
+  }
+};
 
   return (
     <div

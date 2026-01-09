@@ -11,30 +11,6 @@ const CLIENT_URL = process.env.CLIENT_URL || "https://racksmartussp.site";
 // ============================
 // VERIFICATION CODE
 // ============================
-export const sendVerificationCode = async (req, res) => {
-  const { email } = req.body;
-  if (!email) return res.status(400).json({ message: "Email is required" });
-
-  try {
-    const normalizedEmail = email.toLowerCase().trim();
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-
-    // Store in Redis
-    await redis.set(`verify:${normalizedEmail}`, code, "EX", 600);
-    console.log("Verification code stored:", code);
-
-    // Send email
-    const html = `<p>Your verification code is <b>${code}</b></p>`;
-    const text = `Your verification code is ${code}. Valid for 10 minutes.`;
-    await sendEmail(email, "Racksmart Verification Code", html, text);
-
-    console.log("✅ Verification email sent to", email);
-    res.status(200).json({ message: "Verification code sent successfully!" });
-  } catch (error) {
-    console.error("sendVerificationCode Error:", error);
-    res.status(500).json({ message: "Failed to send verification code", error: error.message });
-  }
-};
 
 // ============================
 // PASSWORD RESET
@@ -87,27 +63,6 @@ export const forgotPassword = async (req, res) => {
   }
 };
 
-export const verifyCode = async (req, res) => {
-  try {
-    const { email, code } = req.body;
-    if (!email || !code) return res.status(400).json({ message: "Email and code are required" });
-
-    const storedCode = await redis.get(`verify:${email}`);
-    if (!storedCode) return res.status(400).json({ message: "Code expired or not found" });
-    if (storedCode !== code) return res.status(400).json({ message: "Invalid code" });
-
-    await redis.del(`verify:${email}`);
-
-    // ✅ Mark user as verified
-    const user = await User.findOneAndUpdate({ email }, { isVerified: true }, { new: true });
-
-    res.json({ message: "Code verified successfully!", user });
-  } catch (error) {
-    console.error("verifyCode error:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
-
 export const resetPassword = async (req, res) => {
   const { token, newPassword, confirmNewPassword } = req.body;
   if (!token || !newPassword || !confirmNewPassword)
@@ -154,6 +109,12 @@ const storeRefreshToken = async (userId, refreshToken) => {
   );
 };
 
+export const generateVerificationToken = () => {
+  const token = crypto.randomBytes(32).toString("hex");
+  const expires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+  return { token, expires };
+};
+
 const setCookies = (res, accessToken, refreshToken) => {
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
@@ -167,6 +128,26 @@ const setCookies = (res, accessToken, refreshToken) => {
     sameSite: "strict",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
+};
+
+export const verifyEmail = async (req, res) => {
+  const { token, id } = req.query;
+
+  const user = await User.findById(id);
+  if (!user) return res.status(404).json({ message: "User not found" });
+
+  if (user.isVerified)
+    return res.status(400).json({ message: "User already verified" });
+
+  if (user.verificationToken !== token || user.verificationTokenExpires < Date.now())
+    return res.status(400).json({ message: "Invalid or expired token" });
+
+  user.isVerified = true;
+  user.verificationToken = undefined;
+  user.verificationTokenExpires = undefined;
+  await user.save();
+
+  res.json({ message: "Email verified successfully!" });
 };
 
 // ============================
@@ -185,39 +166,31 @@ export const signup = async (req, res) => {
   } = req.body;
 
   try {
-    // Validate required fields
     if (!username || !fullName || !email || !password || !confirmPassword) {
       return res
         .status(400)
         .json({ message: "All required fields must be provided" });
     }
 
-    // Validate password match
     if (password !== confirmPassword) {
       return res.status(400).json({ message: "Passwords do not match" });
     }
 
-    // Map old roles to new roles
-    let mappedRole = role || "inventory"; // Default to inventory if not provided
-    if (role === "staff") {
-      mappedRole = "inventory";
-    } else if (role === "personnel") {
-      mappedRole = "management";
-    }
+    let mappedRole = role || "inventory";
+    if (role === "staff") mappedRole = "inventory";
+    else if (role === "personnel") mappedRole = "management";
 
-    // Check for existing admin
     if (mappedRole === "admin" && (await User.findOne({ role: "admin" }))) {
       return res.status(400).json({ message: "Admin account already exists" });
     }
 
-    // Check for duplicate email or username
     if (await User.findOne({ $or: [{ email }, { username }] })) {
       return res
         .status(400)
         .json({ message: "Email or username already exists" });
     }
 
-    // Create user
+    // ✅ Just create user, no email sent here
     const user = await User.create({
       username,
       fullName,
@@ -227,38 +200,12 @@ export const signup = async (req, res) => {
       phone,
       role: mappedRole,
       isActive: true,
+      isVerified: false,
     });
 
-    // Log the activity
-    await UserLog.create({
-      userId: user._id,
-      userName: user.fullName || user.username,
-      role: user.role,
-      activity: "Account created",
-      status: "Logged In",
-      loginTime: new Date(),
-      ip:
-        req.ip ||
-        req.headers["x-forwarded-for"] ||
-        req.connection.remoteAddress,
-    });
-
-    // Generate tokens
-    const { accessToken, refreshToken } = generateTokens(user._id);
-    await storeRefreshToken(user._id, refreshToken);
-    setCookies(res, accessToken, refreshToken);
-
-    // Return user data without password
     res.status(201).json({
-      _id: user._id,
-      username: user.username,
-      fullName: user.fullName,
-      email: user.email,
-      department: user.department,
-      phone: user.phone,
-      role: user.role,
-      isActive: user.isActive,
-      createdAt: user.createdAt,
+      message: "Account created! Please wait for admin to verify or send verification email.",
+      user,
     });
   } catch (error) {
     console.error("Signup error:", error.message);
@@ -270,48 +217,36 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "Invalid email or password" });
 
+    if (!user)
+      return res.status(400).json({ message: "Invalid email or password" });
     if (!(await user.comparePassword(password)))
       return res.status(400).json({ message: "Invalid email or password" });
-
+    if (!user.isVerified)
+      return res
+        .status(403)
+        .json({ message: "Please verify your email before logging in" });
     if (!user.isActive)
-      return res.status(403).json({ message: "Account inactive. Contact admin." });
+      return res
+        .status(403)
+        .json({ message: "Account inactive. Contact admin." });
 
-    // If not verified, send verification code
-    if (!user.isVerified) {
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-      await redis.set(`verify:${email}`, code, "EX", 600); // store code in Redis
-
-      const html = `<p>Your Racksmart verification code: <b>${code}</b></p>`;
-      await sendEmail(email, "Racksmart Verification Code", html);
-
-      return res.json({
-        message: "Verification code sent. Check your email.",
-        user: {
-          _id: user._id,
-          username: user.username,
-          fullName: user.fullName,
-          email: user.email,
-          department: user.department,
-          phone: user.phone,
-          role: user.role,
-          isActive: user.isActive,
-        },
-        requiresVerification: true, // frontend can redirect to CodeVerification
-      });
-    }
-
-    // If already verified, generate tokens
+    // Generate tokens
     const { accessToken, refreshToken } = generateTokens(user._id);
     await storeRefreshToken(user._id, refreshToken);
     setCookies(res, accessToken, refreshToken);
 
-    res.json({
-      message: "Login successful",
-      user,
-      requiresVerification: false,
+    // Log login
+    await UserLog.create({
+      userId: user._id,
+      userName: user.fullName || user.username,
+      role: user.role,
+      event: "User logged in",
+      additional: `IP: ${req.ip || req.headers["x-forwarded-for"] || "N/A"}`,
+      dateTime: new Date(),
     });
+
+    res.json({ message: "Login successful", user });
   } catch (error) {
     console.error("Login error:", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
@@ -321,25 +256,32 @@ export const login = async (req, res) => {
 export const logout = async (req, res) => {
   try {
     const refreshToken = req.cookies.refreshToken;
+
     if (refreshToken) {
       const decoded = jwt.verify(
         refreshToken,
         process.env.REFRESH_TOKEN_SECRET
       );
-      const latestLog = await UserLog.findOne({
+
+      const user = await User.findById(decoded.userId).select("fullName role");
+
+      // ✅ Create a new log row for logout
+      await UserLog.create({
         userId: decoded.userId,
-        status: "Logged In",
-      }).sort({ loginTime: -1 });
-      if (latestLog) {
-        latestLog.status = "Logged Out";
-        latestLog.activity = "Logged Out";
-        latestLog.logoutTime = new Date();
-        await latestLog.save();
-      }
+        userName: user?.fullName || "Unknown",
+        role: user?.role || "Unknown",
+        event: "User logged out",
+        additional: `IP: ${req.ip || req.headers["x-forwarded-for"] || "N/A"}`,
+        dateTime: new Date(),
+      });
+
+      // Delete refresh token
       await redis.del(`refresh_token:${decoded.userId}`);
     }
+
     res.clearCookie("accessToken");
     res.clearCookie("refreshToken");
+
     res.json({ message: "Logged out successfully" });
   } catch (error) {
     console.error("Logout error:", error.message);
