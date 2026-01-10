@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import PageHeader from "../components/PageHeader";
 
 const Announcement = () => {
     const [announcements, setAnnouncements] = useState([]);
@@ -67,24 +68,7 @@ const Announcement = () => {
     return (
         <main className="px-4 md:px-6 py-6 font-sans bg-gray-100 min-h-screen">
             {/* Header */}
-            <div className="bg-white p-6 rounded-xl shadow mb-6">
-                <h1 className="text-xl font-semibold text-gray-800">
-                    RACKSMART – Announcement Center
-                </h1>
-                <p className="text-gray-500 text-sm">
-                    Create and manage announcements visible to specific user roles.
-                </p>
-
-                {/* Instruction Box */}
-                <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg shadow mt-4">
-          <p className="text-blue-900 text-sm font-bold">Guidelines:</p>
-                    <ul className="list-disc list-inside text-blue-900 text-sm space-y-1">
-                        <li>Use clear and concise titles for announcements.</li>
-                        <li>Assign announcements to the proper user roles.</li>
-                        <li>Ensure the content is accurate and relevant.</li>
-                    </ul>
-                </div>
-            </div>
+            <PageHeader pageName="Announcement" />
 
             {/* Form */}
             <div className="bg-white p-6 rounded-xl shadow mb-6">

@@ -9,7 +9,6 @@ import { useUserStore } from "../stores/useUserStore";
 import StockChart from "../components/StockChart";
 import Setting from "../components/Setting";
 import Product from "../components/Product";
-import Report from "../components/Report";
 import Announcement from "../components/Announcement";
 import UserActivity from "../components/UserActivity";
 import UserManagement from "../components/UserManagement";
@@ -24,6 +23,7 @@ import ProductManagement from "../components/ProductManagement";
 import SuppliesMovements from "../components/SuppliesMovements";
 import SuppliesManagement from "../components/SuppliesManagement";
 import Assets from "../components/Assets";
+import TransacrionTracker from "../components/TransacrionTracker.jsx";
 
 import { NAV_BY_ROLE } from "../constants/dashboardNavItems.js";
 
@@ -41,9 +41,7 @@ const Dashboard = () => {
   const [activeContent, setActiveContent] = useState("Dashboard");
   const [clock, setClock] = useState("");
   
-  const NAV_ITEMS = (NAV_BY_ROLE[user?.role] || []).sort((a, b) =>
-    a.label.localeCompare(b.label)
-  );
+  const NAV_ITEMS = (NAV_BY_ROLE[user?.role] || [])
 
   // 🔹 Auth guard
   if (checkingAuth) {
@@ -95,8 +93,8 @@ const Dashboard = () => {
         return <Setting />;
       case "Product":
         return <Product />;
-      case "Report":
-        return <Report />;
+      case "Transactions Tracker":
+        return <TransacrionTracker />;
       case "User Activity":
         return <UserActivity />;
       case "User Management":

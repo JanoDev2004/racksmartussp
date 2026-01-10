@@ -1,28 +1,29 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Edit, Trash2, Search } from "lucide-react";
+import { Plus, Edit, Trash2, Search, User } from "lucide-react";
 import { useUsersStore } from "../stores/useUsersStore";
 
 const UserManagement = () => {
-  const { users, loading, fetchUsers, addUser, updateUser, deleteUser } = useUsersStore();
+  const { users, loading, fetchUsers, addUser, updateUser, deleteUser } =
+    useUsersStore();
   const [searchName, setSearchName] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [newUser, setNewUser] = useState({
-  username: "",       // ✅ Add this
-  fullName: "",
-  email: "",
-  phone: "",
-  department: "",
-  role: "",
-  image: null,
-  isOnline: false,
-});
+    username: "", // ✅ Add this
+    fullName: "",
+    email: "",
+    phone: "",
+    department: "",
+    role: "",
+    image: null,
+    isOnline: false,
+  });
 
   useEffect(() => {
     fetchUsers(); // load users from API on mount
   }, [fetchUsers]);
 
   const filteredUsers = users.filter((u) =>
-    u.fullName.toLowerCase().includes(searchName.toLowerCase())
+    (u.fullName || "").toLowerCase().includes(searchName.toLowerCase())
   );
 
   const handleSaveUser = async () => {
@@ -35,7 +36,7 @@ const UserManagement = () => {
     }
 
     setNewUser({
-      username: "",       // ✅ Add this
+      username: "", // ✅ Add this
       fullName: "",
       email: "",
       phone: "",
@@ -78,7 +79,9 @@ const UserManagement = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 flex-1">
             {/* Search Filter */}
             <div className="flex flex-col">
-              <label className="text-[14px] font-bold text-gray-400 mb-1">Search User</label>
+              <label className="text-[14px] font-bold text-gray-400 mb-1">
+                Search User
+              </label>
               <div className="flex items-center border border-gray-300 rounded-md px-3 py-1.5 bg-white focus-within:ring-2 focus-within:ring-blue-500 transition h-9.5">
                 <Search size={16} className="text-gray-500 mr-2" />
                 <input
@@ -108,68 +111,93 @@ const UserManagement = () => {
           <table className="w-full text-sm">
             <thead className="bg-[#010197] text-white uppercase tracking-wide font-bold">
               <tr>
-                <th className="p-3 text-left">Status</th>
                 <th className="p-3 text-left">Image</th>
                 <th className="p-3 text-left">Full Name</th>
                 <th className="p-3 text-left">Email</th>
                 <th className="p-3 text-left">Phone</th>
                 <th className="p-3 text-left">Department</th>
                 <th className="p-3 text-left">Role</th>
+                <th className="p-3 text-left">Verified</th>
                 <th className="p-3 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan="8" className="text-center py-10 text-gray-500 italic">
+                  <td
+                    colSpan="8"
+                    className="text-center py-10 text-gray-500 italic"
+                  >
                     Loading users...
                   </td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="text-center py-10 text-gray-500 italic">
+                  <td
+                    colSpan="8"
+                    className="text-center py-10 text-gray-500 italic"
+                  >
                     No users found.
                   </td>
                 </tr>
               ) : (
                 filteredUsers.map((user) => (
-                  <tr key={user._id} className="odd:bg-white even:bg-gray-50 hover:bg-blue-50 transition">
-                    <td className="p-4 text-center">
-                      <span
-                        className={`inline-block w-2.5 h-2.5 rounded-full ${
-                          user.isOnline
-                            ? "bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]"
-                            : "bg-red-500"
-                        }`}
-                      />
-                    </td>
+                  <tr
+                    key={user._id}
+                    className="odd:bg-white even:bg-gray-50 hover:bg-blue-50 transition"
+                  >
                     <td className="p-4 text-center">
                       {user.image ? (
-                        <img src={user.image} alt="" className="w-9 h-9 rounded-full object-cover border border-gray-200" />
+                        <img
+                          src={user.image}
+                          alt=""
+                          className="w-9 h-9 rounded-full object-cover border border-gray-200"
+                        />
                       ) : (
-                        <div className="w-9 h-9 bg-gray-200 rounded-full flex items-center justify-center text-gray-400 text-[10px]">N/A</div>
+                        <div className="w-9 h-9 bg-gray-200 rounded-full flex items-center justify-center text-gray-400 text-[10px]">
+                          <User size={14} />
+                        </div>
                       )}
                     </td>
-                    <td className="p-4 font-semibold text-gray-700">{user.fullName}</td>
+                    <td className="p-4 font-semibold text-gray-700">
+                      {user.fullName}
+                    </td>
                     <td className="p-4 text-gray-600">{user.email}</td>
                     <td className="p-4 text-gray-600">{user.phone}</td>
                     <td className="p-4 text-gray-600">{user.department}</td>
                     <td className="p-4">
                       <span
                         className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase whitespace-nowrap
-                          ${user.role === 'Admin' ? 'border-blue-200 text-blue-600 bg-blue-50' :
-                            user.role === 'Management' ? 'border-orange-200 text-orange-600 bg-orange-50' :
-                            'border-green-200 text-green-600 bg-green-50'}`}
+                          ${
+                            user.role === "Admin"
+                              ? "border-blue-200 text-blue-600 bg-blue-50"
+                              : user.role === "Management"
+                              ? "border-orange-200 text-orange-600 bg-orange-50"
+                              : "border-green-200 text-green-600 bg-green-50"
+                          }`}
                       >
                         {user.role}
                       </span>
                     </td>
+                    <td className="p-4 text-center">
+                      {user.isVerified ? (
+                        <span className="text-green-600 font-bold">Yes</span>
+                      ) : (
+                        <span className="text-red-600 font-bold">No</span>
+                      )}
+                    </td>
                     <td className="p-4">
                       <div className="flex justify-center gap-3">
-                        <button onClick={() => handleEdit(user)} className="text-blue-600 hover:text-blue-800 flex items-center gap-1 font-bold">
+                        <button
+                          onClick={() => handleEdit(user)}
+                          className="text-blue-600 hover:text-blue-800 flex items-center gap-1 font-bold"
+                        >
                           <Edit size={14} /> Edit
                         </button>
-                        <button onClick={() => handleDelete(user._id)} className="text-red-600 hover:text-red-800 flex items-center gap-1 font-bold">
+                        <button
+                          onClick={() => handleDelete(user._id)}
+                          className="text-red-600 hover:text-red-800 flex items-center gap-1 font-bold"
+                        >
                           <Trash2 size={14} /> Delete
                         </button>
                       </div>
@@ -205,7 +233,14 @@ const UserManagement = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {["username", "fullName", "email", "phone", "department", "role"].map((key) => (
+              {[
+                "username",
+                "fullName",
+                "email",
+                "phone",
+                "department",
+                "role",
+              ].map((key) => (
                 <div key={key}>
                   <label className="block text-sm font-semibold mb-1 text-gray-700">
                     {key.charAt(0).toUpperCase() + key.slice(1)}
@@ -213,7 +248,9 @@ const UserManagement = () => {
                   <input
                     type={key === "email" ? "email" : "text"}
                     value={newUser[key] || ""}
-                    onChange={(e) => setNewUser({ ...newUser, [key]: e.target.value })}
+                    onChange={(e) =>
+                      setNewUser({ ...newUser, [key]: e.target.value })
+                    }
                     className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[#010197] focus:outline-none"
                   />
                 </div>
@@ -236,16 +273,6 @@ const UserManagement = () => {
                       });
                   }}
                 />
-              </label>
-
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={newUser.isOnline || false}
-                  onChange={(e) => setNewUser({ ...newUser, isOnline: e.target.checked })}
-                  className="accent-[#010197]"
-                />
-                Online
               </label>
             </div>
 

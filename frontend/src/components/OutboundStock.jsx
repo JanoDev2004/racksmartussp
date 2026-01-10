@@ -1,67 +1,65 @@
 import React, { useEffect, useState } from "react";
 import { Plus, Minus, CheckCircle, PackageMinus } from "lucide-react";
+import { useOutboundStore } from "../stores/useOutboundStore";
 
 const OutboundStock = () => {
-  // ================= STATE =================
-  const [packingLists, setPackingLists] = useState({});
+  const {
+    outboundRecords,
+    fetchOutboundRecords,
+    confirmOutboundRecord,
+    loading,
+  } = useOutboundStore();
+
   const [selectedPL, setSelectedPL] = useState("");
   const [items, setItems] = useState([]);
 
-  // ================= LOAD OUTBOUND PACKING LISTS =================
+  // Load outbound records on mount
   useEffect(() => {
-    const saved = localStorage.getItem("outbound-records");
-    if (saved) setPackingLists(JSON.parse(saved));
+    fetchOutboundRecords();
   }, []);
 
-  // ================= SELECT PACKING LIST =================
+  // Handle selecting a packing list from dropdown
   const handleSelectPL = (pl) => {
     setSelectedPL(pl);
+    const record = outboundRecords.find((r) => r.packingNumber === pl);
+    if (!record) return;
 
-    const mappedItems = packingLists[pl].items.map((i) => ({
+    const mappedItems = record.items.map((i) => ({
       ...i,
-      actualQty: i.qty, // default same as planned
+      actualQty: i.qty,
     }));
 
     setItems(mappedItems);
   };
 
-  // ================= ADJUST QTY =================
+  // Adjust actual quantity
   const adjustQty = (idx, type) => {
     const updated = [...items];
-
-    if (type === "minus" && updated[idx].actualQty > 0) {
-      updated[idx].actualQty -= 1;
-    }
-
-    if (type === "plus" && updated[idx].actualQty < updated[idx].qty) {
-      updated[idx].actualQty += 1;
-    }
-
+    if (type === "minus" && updated[idx].actualQty > 0) updated[idx].actualQty -= 1;
+    if (type === "plus" && updated[idx].actualQty < updated[idx].qty) updated[idx].actualQty += 1;
     setItems(updated);
   };
 
-  // ================= CONFIRM OUTBOUND =================
-  const confirmOutbound = () => {
+  // Confirm outbound
+  const handleConfirm = async () => {
     if (!selectedPL) return;
 
-    // 👉 DITO normally magbabawas ng stock (demo lang)
-    console.log("Outbounded Items:", items);
-
-    const updated = { ...packingLists };
-    delete updated[selectedPL];
-
-    setPackingLists(updated);
-    localStorage.setItem("outbound-records", JSON.stringify(updated));
-
-    setSelectedPL("");
-    setItems([]);
-
-    alert("Stock successfully outbounded!");
+    const result = await confirmOutboundRecord(selectedPL, items);
+    if (result.success) {
+      alert("Outbound confirmed!");
+      setSelectedPL("");
+      setItems([]);
+    } else {
+      alert(`Error: ${result.message}`);
+    }
   };
+
+  // Pending packing lists
+  const pendingRecords = outboundRecords.filter((r) => r.status === "Pending");
 
   return (
     <main className="px-4 md:px-6 py-6 font-sans bg-gray-100 min-h-screen">
-      {/* ================= HEADER ================= */}
+      {/* HEADER */}
       <div className="bg-white p-6 rounded-xl shadow mb-6">
         <h1 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
           <PackageMinus size={20} /> RACKSMART – Outbound Stock Verification
@@ -69,45 +67,31 @@ const OutboundStock = () => {
         <p className="text-gray-500 text-sm">
           Verify physical dispatch before deducting inventory.
         </p>
-
-        <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg shadow mt-4">
-          <p className="text-blue-900 text-sm font-bold">Guidelines:</p>
-          <ul className="list-disc list-inside text-blue-900 text-sm space-y-1">
-            <li>Physically count items before release.</li>
-            <li>Adjust quantity if short or partially released.</li>
-            <li>Confirm only once items are ready for dispatch.</li>
-          </ul>
-        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* ================= LEFT ================= */}
+        {/* LEFT: Select PL & Table */}
         <div className="lg:col-span-2 space-y-6">
-          {/* SELECT PACKING LIST */}
+          {/* Dropdown */}
           <div className="bg-white p-6 rounded-xl shadow">
             <h5 className="text-gray-700 font-bold border-b border-gray-200 pb-1 mb-4">
-              Select Packing Lists
-            </h5>
-
-            <label className="text-[14px] font-bold text-gray-400  mb-1 block">
               Select Packing List
-            </label>
-
+            </h5>
             <select
               value={selectedPL}
               onChange={(e) => handleSelectPL(e.target.value)}
-              className="border border-gray-300 rounded-md px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              className="border border-gray-300 rounded-md px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 w-full"
             >
               <option value="">-- Select Packing List --</option>
-              {Object.keys(packingLists).map((pl) => (
-                <option key={pl} value={pl}>
-                  {pl} – {packingLists[pl].packingNumber}
+              {pendingRecords.map((r) => (
+                <option key={r.packingNumber} value={r.packingNumber}>
+                  {r.packingNumber} – {r.consignee}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* ITEMS TABLE */}
+          {/* Items Table */}
           <div className="bg-white p-6 rounded-xl shadow">
             <h5 className="text-gray-700 font-bold border-b border-gray-200 pb-1 mb-4">
               Dispatch Quantity Verification
@@ -118,21 +102,17 @@ const OutboundStock = () => {
                 <thead className="bg-[#010197] text-white uppercase tracking-wide">
                   <tr>
                     <th className="p-3 text-left">Code</th>
-                    <th className="p-3 text-left">Category</th>
+                    <th className="p-3 text-left">Description</th>
                     <th className="p-3 text-left">Dimension</th>
                     <th className="p-3 text-center">Planned</th>
                     <th className="p-3 text-center">Actual</th>
                     <th className="p-3 text-center">Action</th>
                   </tr>
                 </thead>
-
                 <tbody className="divide-y divide-gray-100">
                   {items.length === 0 ? (
                     <tr>
-                      <td
-                        colSpan="6"
-                        className="text-center py-10 text-gray-400 italic"
-                      >
+                      <td colSpan="6" className="text-center py-10 text-gray-400 italic">
                         Select a packing list
                       </td>
                     </tr>
@@ -142,33 +122,26 @@ const OutboundStock = () => {
                         key={idx}
                         className="odd:bg-white even:bg-gray-50 hover:bg-blue-50 transition"
                       >
-                        <td className="p-4 font-semibold text-blue-700">
-                          {i.code}
-                        </td>
-                        <td className="p-4">{i.category}</td>
+                        <td className="p-4 font-semibold text-blue-700">{i.itemCode}</td>
+                        <td className="p-4">{i.itemDescription}</td>
                         <td className="p-4">{i.dimension}</td>
                         <td className="p-4 text-center font-bold">{i.qty}</td>
-                        <td className="p-4 text-center font-bold">
-                          {i.actualQty}
-                        </td>
-                        <td className="p-4 text-center">
-                          <div className="flex justify-center gap-2">
+                        <td className="p-4 text-center font-bold">{i.actualQty}</td>
+                        <td className="p-4 text-center flex justify-center gap-2">
+                          <button
+                            onClick={() => adjustQty(idx, "minus")}
+                            className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded transition"
+                          >
+                            <Minus size={14} />
+                          </button>
+                          {i.actualQty < i.qty && (
                             <button
-                              onClick={() => adjustQty(idx, "minus")}
-                              className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded transition"
+                              onClick={() => adjustQty(idx, "plus")}
+                              className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded transition"
                             >
-                              <Minus size={14} />
+                              <Plus size={14} />
                             </button>
-
-                            {i.actualQty < i.qty && (
-                              <button
-                                onClick={() => adjustQty(idx, "plus")}
-                                className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded transition"
-                              >
-                                <Plus size={14} />
-                              </button>
-                            )}
-                          </div>
+                          )}
                         </td>
                       </tr>
                     ))
@@ -180,37 +153,37 @@ const OutboundStock = () => {
             {items.length > 0 && (
               <div className="flex justify-end mt-6">
                 <button
-                  onClick={confirmOutbound}
+                  onClick={handleConfirm}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-bold flex items-center gap-2"
+                  disabled={loading}
                 >
-                  <CheckCircle size={18} />
-                  Confirm Outbound
+                  <CheckCircle size={18} /> Confirm Outbound
                 </button>
               </div>
             )}
           </div>
         </div>
 
-        {/* ================= RIGHT ================= */}
+        {/* RIGHT: Pending Packing Lists */}
         <div className="bg-white p-6 rounded-xl shadow">
           <h5 className="text-gray-700 font-bold border-b border-gray-200 pb-1 mb-4">
             Pending Packing Lists
           </h5>
 
-          {Object.keys(packingLists).length === 0 ? (
-            <p className="text-center text-gray-400 py-20 text-sm">
-              No pending outbound lists
-            </p>
+          {pendingRecords.length === 0 ? (
+            <p className="text-center text-gray-400 py-20 text-sm">No pending outbound lists</p>
           ) : (
-            Object.keys(packingLists).map((pl) => (
-              <div key={pl} className="border rounded-lg p-3 mb-3 bg-gray-50">
-                <p className="text-xs font-bold text-blue-600">{pl}</p>
-                <p className="font-bold text-gray-800">
-                  {packingLists[pl].packingNumber}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {packingLists[pl].consignee}
-                </p>
+            pendingRecords.map((r) => (
+              <div
+                key={r.packingNumber}
+                className={`border rounded-lg p-3 mb-3 bg-gray-50 cursor-pointer ${
+                  selectedPL === r.packingNumber ? "border-blue-600 bg-blue-100" : ""
+                }`}
+                onClick={() => handleSelectPL(r.packingNumber)}
+              >
+                <p className="text-xs font-bold text-blue-600">{r.packingNumber}</p>
+                <p className="font-bold text-gray-800">{r.consignee}</p>
+                <p className="text-xs text-gray-500">{r.status}</p>
               </div>
             ))
           )}

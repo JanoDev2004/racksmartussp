@@ -2,7 +2,6 @@ import {
   LayoutDashboard,
   Settings,
   Package,
-  FileText,
   Bell,
   Users,
   Truck,
@@ -14,6 +13,7 @@ import {
   RefreshCcw,
   Building2,
   BarChart3,
+  ArrowLeftRight,
 } from "lucide-react";
 
 // Common for all roles
@@ -21,7 +21,7 @@ export const COMMON_NAV = [
   { label: "Dashboard", icon: LayoutDashboard },
   { label: "Setting", icon: Settings },
   { label: "Product", icon: Package },
-  { label: "Report", icon: FileText },
+  { label: "Transactions Tracker", icon: ArrowLeftRight },
 ];
 
 // Admin-specific

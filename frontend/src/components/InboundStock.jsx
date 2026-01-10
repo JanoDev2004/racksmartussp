@@ -1,25 +1,43 @@
 import React, { useEffect, useState } from "react";
 import { Plus, Minus, CheckCircle } from "lucide-react";
+import { useInboundStore } from "../stores/useInboundStore";
 
 const InboundStock = () => {
+  // ================= STORE =================
+  const {
+    pendingPackingLists,
+    fetchPendingPackingLists,
+    confirmInbound,
+    loading,
+  } = useInboundStore();
+
   // ================= STATE =================
-  const [packingLists, setPackingLists] = useState({});
-  const [selectedPL, setSelectedPL] = useState("");
+  const [selectedPL, setSelectedPL] = useState(""); // containerNumber
   const [items, setItems] = useState([]);
 
-  // ================= LOAD PACKING LISTS =================
+  // ================= LOAD PENDING PACKING LISTS =================
   useEffect(() => {
-    const saved = localStorage.getItem("inbound-records");
-    if (saved) setPackingLists(JSON.parse(saved));
-  }, []);
+    fetchPendingPackingLists();
+  }, [fetchPendingPackingLists]);
 
   // ================= SELECT PACKING LIST =================
-  const handleSelectPL = (pl) => {
-    setSelectedPL(pl);
+  const handleSelectPL = (containerNumber) => {
+    setSelectedPL(containerNumber);
 
-    const mappedItems = packingLists[pl].items.map((i) => ({
+    if (!containerNumber) {
+      setItems([]);
+      return;
+    }
+
+    const pl = pendingPackingLists.find(
+      (p) => p.containerNumber === containerNumber
+    );
+
+    if (!pl) return;
+
+    const mappedItems = (pl.items || []).map((i) => ({
       ...i,
-      actualQty: i.qty, // default same as planned
+      actualQty: i.qty || 0, // default = planned qty
     }));
 
     setItems(mappedItems);
@@ -41,27 +59,23 @@ const InboundStock = () => {
   };
 
   // ================= CONFIRM INBOUND =================
-  const confirmInbound = () => {
+  const handleConfirmInbound = async () => {
     if (!selectedPL) return;
 
-    // 👉 DITO papasok stock update (demo lang)
-    console.log("Inbounded Items:", items);
+    const res = await confirmInbound({
+      containerNumber: selectedPL,
+      items,
+    });
 
-    const updated = { ...packingLists };
-    delete updated[selectedPL];
-
-    setPackingLists(updated);
-    localStorage.setItem("inbound-records", JSON.stringify(updated));
-
-    setSelectedPL("");
-    setItems([]);
-
-    alert("Stock successfully inbounded!");
+    if (res.success) {
+      setSelectedPL("");
+      setItems([]);
+      alert("Stock successfully inbounded!");
+    }
   };
 
   return (
     <main className="px-4 md:px-6 py-6 font-sans bg-gray-100 min-h-screen">
-
       {/* ================= HEADER ================= */}
       <div className="bg-white p-6 rounded-xl shadow mb-6">
         <h1 className="text-xl font-semibold text-gray-800">
@@ -73,27 +87,27 @@ const InboundStock = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
         {/* ================= LEFT ================= */}
         <div className="lg:col-span-2 space-y-6">
-
           {/* SELECT PACKING LIST */}
           <div className="bg-white p-6 rounded-xl shadow">
+            <h5 className="text-gray-700 font-bold border-b border-gray-200 pb-1 mb-4">
+              Purchase Orders Pending
+            </h5>
 
-             <h5 className="text-gray-700 font-bold border-b border-gray-200 pb-1 mb-4">
-Packing List Pending            </h5>
-
-              <label className="text-[14px] font-bold text-gray-400  mb-1 block">Select Packing List</label>
+            <label className="text-[14px] font-bold text-gray-400 mb-1 block">
+              Select Packing List
+            </label>
 
             <select
               value={selectedPL}
               onChange={(e) => handleSelectPL(e.target.value)}
-                className="border border-gray-300 rounded-md px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              className="border border-gray-300 rounded-md px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">-- Select Packing List --</option>
-              {Object.keys(packingLists).map((pl) => (
-                <option key={pl} value={pl}>
-                  {pl} – {packingLists[pl].poNumber}
+              {pendingPackingLists.map((pl) => (
+                <option key={pl.containerNumber} value={pl.containerNumber}>
+                  {pl.containerNumber} – {pl.poNumber}
                 </option>
               ))}
             </select>
@@ -101,71 +115,80 @@ Packing List Pending            </h5>
 
           {/* ITEMS TABLE */}
           <div className="bg-white p-6 rounded-xl shadow">
-            
-             <h5 className="text-gray-700 font-bold border-b border-gray-200 pb-1 mb-4">
+            <h5 className="text-gray-700 font-bold border-b border-gray-200 pb-1 mb-4">
               Physical Count Verification
             </h5>
 
             <div className="overflow-x-auto border border-gray-200 rounded-xl shadow-sm">
-  <table className="w-full text-sm">
-    <thead className="bg-[#010197] text-white uppercase tracking-wide">
-      <tr>
-        <th className="p-3 text-left">Code</th>
-        <th className="p-3 text-left">Category</th>
-        <th className="p-3 text-left">Dimension</th>
-        <th className="p-3 text-center">Planned</th>
-        <th className="p-3 text-center">Actual</th>
-        <th className="p-3 text-center">Action</th>
-      </tr>
-    </thead>
+              <table className="w-full text-sm">
+                <thead className="bg-[#010197] text-white uppercase tracking-wide">
+                  <tr>
+                    <th className="p-3 text-left">Code</th>
+                    <th className="p-3 text-left">Description</th>
+                    <th className="p-3 text-left">Dimension</th>
+                    <th className="p-3 text-center">Planned</th>
+                    <th className="p-3 text-center">Actual</th>
+                    <th className="p-3 text-center">Action</th>
+                  </tr>
+                </thead>
 
-    <tbody className="divide-y divide-gray-100">
-      {items.length === 0 ? (
-        <tr>
-          <td colSpan="6" className="text-center py-10 text-gray-400 italic">
-            Select a packing list
-          </td>
-        </tr>
-      ) : (
-        items.map((i, idx) => (
-          <tr key={idx} className="odd:bg-white even:bg-gray-50 hover:bg-blue-50 transition">
-            <td className="p-4 font-semibold text-blue-700">{i.code}</td>
-            <td className="p-4">{i.category}</td>
-            <td className="p-4">{i.dimension}</td>
-            <td className="p-4 text-center font-bold">{i.qty}</td>
-            <td className="p-4 text-center font-bold">{i.actualQty}</td>
-            <td className="p-4 text-center">
-              <div className="flex justify-center gap-2">
-                <button
-                  onClick={() => adjustQty(idx, "minus")}
-                  className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded transition"
-                >
-                  <Minus size={14} />
-                </button>
+                <tbody className="divide-y divide-gray-100">
+                  {items.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan="6"
+                        className="text-center py-10 text-gray-400 italic"
+                      >
+                        Select a packing list
+                      </td>
+                    </tr>
+                  ) : (
+                    items.map((i, idx) => (
+                      <tr
+                        key={idx}
+                        className="odd:bg-white even:bg-gray-50 hover:bg-blue-50 transition"
+                      >
+                        <td className="p-4 font-semibold text-blue-700">
+                          {i.itemCode}
+                        </td>
+                        <td className="p-4">{i.itemDescription}</td>
+                        <td className="p-4">{i.dimension}</td>
+                        <td className="p-4 text-center font-bold">{i.qty}</td>
+                        <td className="p-4 text-center font-bold">
+                          {i.actualQty}
+                        </td>
+                        <td className="p-4 text-center">
+                          <div className="flex justify-center gap-2">
+                            <button
+                              onClick={() => adjustQty(idx, "minus")}
+                              className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded transition"
+                            >
+                              <Minus size={14} />
+                            </button>
 
-                {i.actualQty < i.qty && (
-                  <button
-                    onClick={() => adjustQty(idx, "plus")}
-                    className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded transition"
-                  >
-                    <Plus size={14} />
-                  </button>
-                )}
-              </div>
-            </td>
-          </tr>
-        ))
-      )}
-    </tbody>
-  </table>
-</div>
-
+                            {i.actualQty < i.qty && (
+                              <button
+                                onClick={() => adjustQty(idx, "plus")}
+                                className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded transition"
+                              >
+                                <Plus size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
 
             {items.length > 0 && (
               <div className="flex justify-end mt-6">
                 <button
-                  onClick={confirmInbound}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-bold flex items-center gap-2"
+                  onClick={handleConfirmInbound}
+                  disabled={loading}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-bold flex items-center gap-2 disabled:opacity-50"
                 >
                   <CheckCircle size={18} />
                   Confirm Inbound
@@ -177,25 +200,25 @@ Packing List Pending            </h5>
 
         {/* ================= RIGHT ================= */}
         <div className="bg-white p-6 rounded-xl shadow">
-          
-            <h5 className="text-gray-700 font-bold border-b border-gray-200 pb-1 mb-4">
+          <h5 className="text-gray-700 font-bold border-b border-gray-200 pb-1 mb-4">
             Pending Packing Lists
-            </h5>
+          </h5>
 
-          {Object.keys(packingLists).length === 0 ? (
+          {pendingPackingLists.length === 0 ? (
             <p className="text-center text-gray-400 py-20 text-sm">
               No pending packing lists
             </p>
           ) : (
-            Object.keys(packingLists).map((pl) => (
-              <div key={pl} className="border rounded-lg p-3 mb-3 bg-gray-50">
-                <p className="text-xs font-bold text-blue-600">{pl}</p>
-                <p className="font-bold text-gray-800">
-                  {packingLists[pl].poNumber}
+            pendingPackingLists.map((pl) => (
+              <div
+                key={pl.containerNumber}
+                className="border rounded-lg p-3 mb-3 bg-gray-50"
+              >
+                <p className="text-xs font-bold text-blue-600">
+                  {pl.containerNumber}
                 </p>
-                <p className="text-xs text-gray-500">
-                  {packingLists[pl].supplier}
-                </p>
+                <p className="font-bold text-gray-800">{pl.poNumber}</p>
+                <p className="text-xs text-gray-500">{pl.supplier}</p>
               </div>
             ))
           )}

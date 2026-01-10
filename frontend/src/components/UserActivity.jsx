@@ -12,6 +12,7 @@ import {
   Calendar
 } from "lucide-react";
 import { useUserLogStore } from "../stores/useUserLogStore";
+import PageHeader from "../components/PageHeader";
 
 const UserActivity = () => {
   const { logs, loading, fetchUserLogs } = useUserLogStore();
@@ -78,22 +79,7 @@ const UserActivity = () => {
   return (
     <main className="px-4 md:px-6 py-6 font-sans bg-gray-100 min-h-screen">
       {/* Header Container */}
-      <div className="bg-white p-6 rounded-xl shadow mb-6">
-        <h1 className="text-xl font-semibold text-gray-800">
-          RACKSMART – Activity Logs
-        </h1>
-        <p className="text-gray-500 text-sm">
-          Monitor system changes and user actions. Detailed audit trail for security.
-        </p>
-
-        <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg shadow mt-4">
-          <p className="text-blue-900 text-sm font-bold">Guidelines:</p>
-          <ul className="list-disc list-inside text-blue-900 text-sm space-y-1">
-            <li>Use the filters below to locate specific actions by employee or date range.</li>
-            <li>Reports generated reflect the currently filtered view.</li>
-          </ul>
-        </div>
-      </div>
+      <PageHeader pageName="User Activity" />
 
       {/* Main Content */}
       <div className="bg-white p-6 rounded-xl shadow">
@@ -159,7 +145,7 @@ const UserActivity = () => {
               <tr>
                 <th className="p-3 text-left">Date and Time</th>
                 <th className="p-3 text-left">Role</th>
-                <th className="p-3 text-left">Username</th>
+                <th className="p-3 text-left">Full Name</th>
                 <th className="p-3 text-left">Event</th>
                 <th className="p-3 text-left">Additional Info</th>
               </tr>

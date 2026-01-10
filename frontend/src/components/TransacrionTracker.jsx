@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import PageHeader from "./PageHeader";
 
-const Report = () => {
+const TransacrionTracker = () => {
   const demoProducts = [
     { _id: "1", code: "P001", category: "Electronics", action: "IN", count: 5, client: "Client A", personnel: "User1", createdAt: new Date() },
     { _id: "2", code: "P002", category: "Furniture", action: "OUT", count: 2, client: "Client B", personnel: "User2", createdAt: new Date() },
@@ -46,24 +47,7 @@ const Report = () => {
     <main className="px-4 md:px-6 py-6 font-sans bg-gray-100 min-h-screen">
 
       {/* ================= HEADER CONTAINER ================= */}
-      <div className="bg-white p-6 rounded-xl shadow mb-6">
-        <h1 className="text-xl font-semibold text-gray-800">
-          RACKSMART – Generate Reports
-        </h1>
-        <p className="text-gray-500 text-sm">
-          Filter & download PDF1s reporting all product and supplies transactions.
-        </p>
-
-        {/* Instruction Box */}
-        <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg shadow mt-4">
-          <p className="text-blue-900 text-sm font-bold">Guidelines:</p>
-          <ul className="list-disc list-inside text-blue-900 text-sm space-y-1">
-            <li>Select the specific date range and transaction type to generate accurate and focused reports.</li>
-<li>Review the filtered data on the screen before proceeding to download the PDF document.</li>
-<li>Use these reports for auditing inventory accuracy and tracking supply consumption trends.</li>
-          </ul>
-        </div>
-      </div>
+      <PageHeader pageName="Report" />
 
       {/* Products Transactions */}
       <div className="bg-white p-6 rounded-xl shadow mb-6">
@@ -146,4 +130,4 @@ const Report = () => {
   );
 };
 
-export default Report;
+export default TransacrionTracker;

@@ -8,6 +8,12 @@ import authRoutes from "./routes/auth.route.js"
 import userLogsRoute from "./routes/userLogs.route.js"
 import usersRoutes from "./routes/users.route.js"
 
+import productRoutes from "./routes/products.route.js"
+import suppliestRoutes from "./routes/supplies.route.js"
+import assetsRoutes from "./routes/assets.route.js"
+import inboundRoutes from "./routes/inboundRecord.route.js"
+import outboundRoutes from "./routes/outboundRecord.route.js"
+
 import { connectDB } from "./lib/db.js";
 
 dotenv.config()
@@ -28,6 +34,12 @@ app.use(cookieParser());
 app.use("/api/auth", authRoutes)
 app.use("/api/user-logs", userLogsRoute);
 app.use("/api/users", usersRoutes);
+
+app.use("/api/products", productRoutes);
+app.use("/api/supplies", suppliestRoutes);
+app.use("/api/assets", assetsRoutes);
+app.use("/api/inbound", inboundRoutes);
+app.use("/api/outbound", outboundRoutes);
 
 
 app.listen(PORT, () => {

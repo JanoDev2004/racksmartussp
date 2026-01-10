@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Plus, Trash2, FolderOpen } from "lucide-react";
+import PageHeader from "../components/PageHeader";
 
 const ReserveStock = () => {
   // --- Demo Products (hardcoded for frontend-only) ---
@@ -104,24 +105,7 @@ const ReserveStock = () => {
     <main className="px-4 md:px-6 py-6 font-sans bg-gray-100 min-h-screen">
 
       {/* ================= HEADER CONTAINER ================= */}
-      <div className="bg-white p-6 rounded-xl shadow mb-6">
-        <h1 className="text-xl font-semibold text-gray-800">
-          RACKSMART – Reserved Stock
-        </h1>
-        <p className="text-gray-500 text-sm">
-          Reserve stock items in packages and release when not needed.
-        </p>
-
-        {/* Instruction Box */}
-        <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg shadow mt-4">
-          <p className="text-blue-900 text-sm font-bold">Guidelines:</p>
-          <ul className="list-disc list-inside text-blue-900 text-sm space-y-1">
-            <li>Ensure reserved items are physically tagged or separated to avoid accidental dispatch.</li>
-            <li>Set an expiration date for reservations to return unclaimed items back to active stock.</li>
-            <li>Monitor the 'Reserved' status vs 'Available' stock to maintain accurate inventory planning.</li>
-          </ul>
-        </div>
-      </div>
+      <PageHeader pageName="Reserve Stock" />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Panel: Saved Packages */}

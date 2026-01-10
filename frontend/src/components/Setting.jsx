@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Trash2, Upload } from "lucide-react";
 import { useUserStore } from "../stores/useUserStore"; // adjust path if needed
 import { toast } from "react-hot-toast";
+import axios from "../lib/axios";
+import PageHeader from "../components/PageHeader";
 
 const Setting = () => {
   const {
@@ -101,10 +103,7 @@ const Setting = () => {
   return (
     <main className="px-4 md:px-6 py-6 font-sans bg-gray-100 min-h-screen space-y-6">
       {/* Header */}
-      <div className="bg-white p-6 rounded-xl shadow mb-6">
-        <h1 className="text-xl font-semibold text-gray-800">RACKSMART – Account Settings</h1>
-        <p className="text-gray-500 text-sm">Edit your details, upload/delete avatar, and change password.</p>
-      </div>
+      <PageHeader pageName="Setting" />
 
       {/* Profile */}
       <div className="bg-white p-6 rounded-xl shadow">
