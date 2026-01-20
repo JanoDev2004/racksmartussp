@@ -213,7 +213,7 @@ const InboundRecord = () => {
                       <td className="p-3">{i.itemDescription}</td>
                       <td className="p-3">{i.dimension}</td>
                       <td className="p-3 text-center font-bold">
-                        {i.qty} {i.uom}
+                        {i.qty}
                       </td>
                       <td className="p-3 text-center">
                         <button onClick={() => removeItem(idx)} className="text-red-500">

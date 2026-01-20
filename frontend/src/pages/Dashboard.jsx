@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Menu, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import { useUserStore } from "../stores/useUserStore";
+import useDashboardStore from "../stores/useDashboardStore";
 
 // Components
 import StockChart from "../components/StockChart";
@@ -23,9 +24,10 @@ import ProductManagement from "../components/ProductManagement";
 import SuppliesMovements from "../components/SuppliesMovements";
 import SuppliesManagement from "../components/SuppliesManagement";
 import Assets from "../components/Assets";
-import TransacrionTracker from "../components/TransacrionTracker.jsx";
+import TransactionTracker from "../components/TransactionTracker.jsx";
 
 import { NAV_BY_ROLE } from "../constants/dashboardNavItems.js";
+import useAnnouncementStore from "../stores/useAnnouncementStore.js";
 
 const roleDisplayMap = {
   admin: "ADMINISTRATOR",
@@ -33,15 +35,34 @@ const roleDisplayMap = {
   inventory: "INVENTORY PERSONNEL",
 };
 
-
 const Dashboard = () => {
   const { user, checkingAuth } = useUserStore();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeContent, setActiveContent] = useState("Dashboard");
   const [clock, setClock] = useState("");
-  
-  const NAV_ITEMS = (NAV_BY_ROLE[user?.role] || [])
+
+  const NAV_ITEMS = NAV_BY_ROLE[user?.role] || [];
+
+  const { fetchAnnouncements, getDisplayedForRole } = useAnnouncementStore();
+
+  useEffect(() => {
+    fetchAnnouncements();
+  }, [fetchAnnouncements]);
+
+  const dashboardAnnouncements = getDisplayedForRole(user.role);
+
+  // Zustand store
+  const {
+    pendingInbound,
+    pendingOutbound,
+    reservedStock,
+    loading,
+    error,
+    selectedPeriod,
+    setSelectedPeriod,
+    fetchDashboardData,
+  } = useDashboardStore();
 
   // 🔹 Auth guard
   if (checkingAuth) {
@@ -52,9 +73,7 @@ const Dashboard = () => {
     );
   }
 
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
+  if (!user) return <Navigate to="/login" replace />;
 
   const userFullName = user?.fullName || user?.username;
   const userRole = roleDisplayMap[user?.role] || "USER";
@@ -82,19 +101,34 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Demo KPI counts
-  const inboundStock = 0;
-  const outboundStock = 0;
-  const reserveStock = 0;
+  // Fetch dashboard data on mount
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  const KpiCard = ({ label, color, value }) => (
+    <div className="bg-white rounded-xl shadow border border-gray-200 p-6 flex flex-col items-center justify-center space-y-2">
+      <div
+        className={`text-sm font-semibold text-white px-4 py-1 rounded-full ${color}`}
+      >
+        {label}
+      </div>
+      <div className="text-4xl font-bold text-gray-800 pt-2">{value}</div>
+      <div className="text-sm text-gray-500">Stored Records</div>
+    </div>
+  );
 
   const renderContent = () => {
+    if (loading) return <p>Loading data...</p>;
+    if (error) return <p className="text-red-500">{error}</p>;
+
     switch (activeContent) {
       case "Setting":
         return <Setting />;
       case "Product":
         return <Product />;
       case "Transactions Tracker":
-        return <TransacrionTracker />;
+        return <TransactionTracker />;
       case "User Activity":
         return <UserActivity />;
       case "User Management":
@@ -127,40 +161,44 @@ const Dashboard = () => {
       default:
         return (
           <div className="space-y-6 max-w-300 mx-auto">
+            {dashboardAnnouncements.length > 0 && (
+              <div className="space-y-3">
+                {dashboardAnnouncements.map((a) => (
+                  <div
+                    key={a._id}
+                    className="bg-yellow-100 border-l-4 border-yellow-500 p-4 rounded shadow"
+                  >
+                    <h3 className="font-bold text-yellow-800">{a.title}</h3>
+                    <p className="text-sm text-gray-800">{a.message}</p>
+                    <p className="text-xs text-gray-500">{new Date(a.createdAt).toLocaleString()}</p>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
               <KpiCard
                 label="INBOUND STOCK"
-                value={inboundStock}
+                value={pendingInbound}
                 color="bg-green-500"
               />
               <KpiCard
                 label="OUTBOUND STOCK"
-                value={outboundStock}
+                value={pendingOutbound}
                 color="bg-red-500"
               />
               <KpiCard
                 label="RESERVE STOCK"
-                value={reserveStock}
+                value={reservedStock}
                 color="bg-yellow-500"
               />
             </div>
+
+            {/* StockChart now reads the store directly, no props needed */}
             <StockChart />
           </div>
         );
     }
   };
-
-  const KpiCard = ({ label, color, value }) => (
-    <div className="bg-white rounded-xl shadow border border-gray-200 p-6 flex flex-col items-center justify-center space-y-2">
-      <div
-        className={`text-sm font-semibold text-white px-4 py-1 rounded-full ${color}`}
-      >
-        {label}
-      </div>
-      <div className="text-4xl font-bold text-gray-800 pt-2">{value}</div>
-      <div className="text-sm text-gray-500">Stored Records</div>
-    </div>
-  );
 
   return (
     <div className="flex h-screen bg-gray-100 text-gray-900">
@@ -174,12 +212,11 @@ const Dashboard = () => {
       {/* Sidebar */}
       <motion.aside
         className={`fixed inset-y-0 md:relative z-30 bg-[#010197] text-white flex flex-col transition-all duration-300 ease-in-out
-          ${collapsed ? "w-20" : "w-64"}
-          ${
-            mobileOpen
-              ? "translate-x-0 left-0 w-[60%] shadow-2xl p-6"
-              : "-translate-x-full md:translate-x-0 md:p-4"
-          } h-screen`}
+        ${collapsed ? "w-20" : "w-64"} ${
+          mobileOpen
+            ? "translate-x-0 left-0 w-[60%] shadow-2xl p-6"
+            : "-translate-x-full md:translate-x-0 md:p-4"
+        } h-screen`}
       >
         {/* Logo */}
         <div className="flex items-center justify-between mb-2">
@@ -275,12 +312,21 @@ const Dashboard = () => {
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-y-auto">
         <div className="flex items-center justify-between bg-white text-gray-800 shadow p-4 sticky top-0 z-10">
-          <button
-            onClick={() => setMobileOpen(true)}
-            className="md:hidden p-2 rounded hover:bg-gray-100"
-          >
-            <Menu className="w-5 h-5 text-gray-700" />
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMobileOpen(true)}
+              className="md:hidden p-2 rounded hover:bg-gray-100"
+            >
+              <Menu className="w-5 h-5 text-gray-700" />
+            </button>
+
+            {/* Active Page Title */}
+            <h1 className="text-lg font-bold text-[#010197]">
+              {activeContent}
+            </h1>
+          </div>
+
+          {/* Clock */}
           <span className="text-sm text-gray-700 font-bold">{clock}</span>
         </div>
 

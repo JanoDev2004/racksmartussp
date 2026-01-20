@@ -16,31 +16,34 @@ import {
   ArrowLeftRight,
 } from "lucide-react";
 
-// Common for all roles
-export const COMMON_NAV = [
+// First and last links (common for all roles)
+const FIRST_LINKS = [
   { label: "Dashboard", icon: LayoutDashboard },
-  { label: "Setting", icon: Settings },
   { label: "Product", icon: Package },
-  { label: "Transactions Tracker", icon: ArrowLeftRight },
 ];
 
-// Admin-specific
-export const ADMIN_NAV = [
+const LAST_LINKS = [
+  { label: "Transactions Tracker", icon: ArrowLeftRight },
+  { label: "Setting", icon: Settings },
+];
+
+// Admin-specific middle links
+const ADMIN_MIDDLE = [
   { label: "Announcement", icon: Bell },
   { label: "User Activity", icon: BarChart3 },
   { label: "User Management", icon: Users },
 ];
 
-// Management-specific
-export const MANAGEMENT_NAV = [
+// Management-specific middle links
+const MANAGEMENT_MIDDLE = [
   { label: "Supplier", icon: Truck },
   { label: "Customer", icon: Users },
   { label: "Inbound Record", icon: ClipboardList },
   { label: "Outbound Record", icon: ClipboardList },
 ];
 
-// Inventory-specific
-export const INVENTORY_NAV = [
+// Inventory-specific middle links
+const INVENTORY_MIDDLE = [
   { label: "Inbound Stock", icon: ArrowDownToLine },
   { label: "Outbound Stock", icon: ArrowUpFromLine },
   { label: "Reserve Stock", icon: Archive },
@@ -50,9 +53,9 @@ export const INVENTORY_NAV = [
   { label: "Assets", icon: Building2 },
 ];
 
-// Map roles to nav arrays
+// Map roles to final nav arrays
 export const NAV_BY_ROLE = {
-  admin: [...COMMON_NAV, ...ADMIN_NAV],
-  management: [...COMMON_NAV, ...MANAGEMENT_NAV],
-  inventory: [...COMMON_NAV, ...INVENTORY_NAV],
+  admin: [...FIRST_LINKS, ...ADMIN_MIDDLE, ...LAST_LINKS],
+  management: [...FIRST_LINKS, ...MANAGEMENT_MIDDLE, ...LAST_LINKS],
+  inventory: [...FIRST_LINKS, ...INVENTORY_MIDDLE, ...LAST_LINKS],
 };

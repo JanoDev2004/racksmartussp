@@ -13,10 +13,12 @@ const Product = () => {
 
   // Filter products based on search
   const filteredProducts = useMemo(() => {
-    return products.filter((p) =>
+  return products.filter(
+    (p) =>
+      !p.archived && // ✅ hide archived products
       (p.itemCode || "").toLowerCase().includes(searchCode.toLowerCase())
-    );
-  }, [products, searchCode]);
+  );
+}, [products, searchCode]);
 
   return (
     <main className="px-4 md:px-6 py-6 font-sans bg-gray-100 min-h-screen">

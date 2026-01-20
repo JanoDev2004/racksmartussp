@@ -49,6 +49,14 @@ const inboundRecordSchema = new mongoose.Schema(
       trim: true,
     },
 
+    confirmedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    confirmedAt: {
+      type: Date,
+    },
+
     items: {
       type: [inboundItemSchema],
       required: true,

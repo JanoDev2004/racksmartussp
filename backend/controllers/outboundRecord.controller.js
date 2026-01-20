@@ -1,5 +1,6 @@
 import OutboundRecord from "../models/outboundRecord.model.js";
 import Product from "../models/products.model.js";
+import StockTransaction from "../models/stockTransaction.model.js";
 
 /**
  * ✅ CREATE OUTBOUND RECORD (PACKING LIST ➜ DISPATCH)
@@ -105,12 +106,11 @@ export const getPendingOutboundRecords = async (req, res) => {
  */
 export const confirmOutboundRecord = async (req, res) => {
   try {
-    const { packingNumber, items } = req.body; // updated
+    const { packingNumber, items } = req.body;
+    const userId = req.user.id;
 
-    if (!packingNumber || !items || items.length === 0) {
-      return res.status(400).json({
-        message: "Packing Number and items are required",
-      });
+    if (!packingNumber || !items?.length) {
+      return res.status(400).json({ message: "Packing Number and items are required" });
     }
 
     const outbound = await OutboundRecord.findOne({
@@ -119,44 +119,45 @@ export const confirmOutboundRecord = async (req, res) => {
     });
 
     if (!outbound) {
-      return res.status(404).json({
-        message: "Pending packing list not found",
-      });
+      return res.status(404).json({ message: "Pending packing list not found" });
     }
 
-    // 🔥 DEDUCT STOCK
     for (const item of items) {
       const product = await Product.findOne({ itemCode: item.itemCode });
 
-      if (!product) {
-        return res.status(404).json({
-          message: `Product with code ${item.itemCode} not found`,
-        });
-      }
-
-      if (product.quantity < item.actualQty) {
+      if (!product || product.quantity < item.actualQty) {
         return res.status(400).json({
-          message: `Insufficient stock for product ${item.itemCode}`,
+          message: `Insufficient stock for ${item.itemCode}`,
         });
       }
 
       product.quantity -= item.actualQty;
       await product.save();
+
+      // 📝 LOG TRANSACTION
+      await StockTransaction.create({
+        type: "OUTBOUND",
+        referenceNo: packingNumber,
+        stakeholder: outbound.consignee,
+        productCode: item.itemCode,
+        productDescription: item.itemDescription,
+        qty: item.actualQty,
+        uom: item.uom,
+        action: "CONFIRMED",
+        performedBy: userId,
+      });
     }
 
     outbound.status = "Confirmed";
     outbound.confirmedAt = new Date();
+    outbound.confirmedBy = userId;
     outbound.actualItems = items;
 
     await outbound.save();
 
-    res.json({
-      success: true,
-      message: "Outbound record confirmed successfully",
-      outbound,
-    });
+    res.json({ success: true, message: "Outbound confirmed", outbound });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
+

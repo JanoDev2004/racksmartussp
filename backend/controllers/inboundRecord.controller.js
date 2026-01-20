@@ -1,5 +1,7 @@
 import InboundRecord from "../models/inboundRecord.model.js";
 import Product from "../models/products.model.js";
+import StockTransaction from "../models/stockTransaction.model.js";
+
 
 /**
  * ✅ CREATE INBOUND (PO ➜ PACKING LIST)
@@ -66,6 +68,7 @@ export const getPendingPackingLists = async (req, res) => {
         containerNumber: 1,
         poNumber: 1,
         supplier: 1,
+        deliveryDate: 1,
         items: 1,
       }
     ).sort({ createdAt: -1 });
@@ -84,12 +87,11 @@ export const getPendingPackingLists = async (req, res) => {
  */
 export const confirmInboundRecord = async (req, res) => {
   try {
-    const { containerNumber, items } = req.body; // updated
+    const { containerNumber, items } = req.body;
+    const userId = req.user.id; // 👈 who confirmed
 
-    if (!containerNumber || !items || items.length === 0) {
-      return res.status(400).json({
-        message: "Container number and items are required",
-      });
+    if (!containerNumber || !items?.length) {
+      return res.status(400).json({ message: "Container number and items are required" });
     }
 
     const inbound = await InboundRecord.findOne({
@@ -98,33 +100,40 @@ export const confirmInboundRecord = async (req, res) => {
     });
 
     if (!inbound) {
-      return res.status(404).json({
-        message: "Pending packing list not found",
-      });
+      return res.status(404).json({ message: "Pending packing list not found" });
     }
 
-    // 🔥 STOCK-IN AFTER PHYSICAL COUNT
+    // 🔥 STOCK-IN
     for (const item of items) {
       await Product.findOneAndUpdate(
         { itemCode: item.itemCode },
-        { $inc: { quantity: item.actualQty } }, // must use actualQty
-        { new: true }
+        { $inc: { quantity: item.actualQty } }
       );
+
+      // 📝 LOG TRANSACTION
+      await StockTransaction.create({
+        type: "INBOUND",
+        referenceNo: containerNumber,
+        stakeholder: inbound.supplier,
+        productCode: item.itemCode,
+        productDescription: item.itemDescription,
+        qty: item.actualQty,
+        uom: item.uom,
+        action: "CONFIRMED",
+        performedBy: userId,
+      });
     }
 
     inbound.status = "Posted";
     inbound.confirmedAt = new Date();
+    inbound.confirmedBy = userId; // 👈 optional
     inbound.actualItems = items;
 
     await inbound.save();
 
-    res.json({
-      success: true,
-      message: "Inbound confirmed successfully",
-      inbound,
-    });
+    res.json({ success: true, message: "Inbound confirmed", inbound });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
+

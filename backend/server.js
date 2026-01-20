@@ -13,6 +13,11 @@ import suppliestRoutes from "./routes/supplies.route.js"
 import assetsRoutes from "./routes/assets.route.js"
 import inboundRoutes from "./routes/inboundRecord.route.js"
 import outboundRoutes from "./routes/outboundRecord.route.js"
+import borrowerRoutes from "./routes/borrowerRecord.route.js"
+import reserveStockRoutes from "./routes/reserveStock.route.js"
+import dashboardRoutes from "./routes/dashboard.route.js"
+import reportsRoutes from "./routes/reports.route.js"
+import announcementRoutes from "./routes/announcement.route.js"
 
 import { connectDB } from "./lib/db.js";
 
@@ -40,6 +45,11 @@ app.use("/api/supplies", suppliestRoutes);
 app.use("/api/assets", assetsRoutes);
 app.use("/api/inbound", inboundRoutes);
 app.use("/api/outbound", outboundRoutes);
+app.use("/api/borrow", borrowerRoutes);
+app.use("/api/reserve", reserveStockRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/reports", reportsRoutes);
+app.use("/api/announcements", announcementRoutes);
 
 
 app.listen(PORT, () => {

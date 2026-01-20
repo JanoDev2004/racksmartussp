@@ -7,6 +7,7 @@ import {
   deleteProduct,
   getProductsForDropdown,
 } from "../controllers/products.controller.js";
+import { protectRoute } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
@@ -14,10 +15,10 @@ const router = express.Router();
 router.get("/dropdown", getProductsForDropdown);
 
 // ✅ CRUD ROUTES
-router.post("/", createProduct);
+router.post("/", protectRoute, createProduct);
 router.get("/", getProducts);
 router.get("/:id", getProductById);
-router.put("/:id", updateProduct);
-router.delete("/:id", deleteProduct);
+router.put("/:id", protectRoute, updateProduct);
+router.delete("/:id", protectRoute, deleteProduct);
 
 export default router;

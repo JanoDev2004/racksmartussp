@@ -1,4 +1,3 @@
-// routes/outboundRecord.routes.js
 import express from "express";
 import {
   createOutboundRecord,
@@ -6,13 +5,15 @@ import {
   getPendingOutboundRecords,
   confirmOutboundRecord,
 } from "../controllers/outboundRecord.controller.js";
+import { protectRoute } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
-router.get("/", getOutboundRecords);
-router.get("/pending", getPendingOutboundRecords);
-router.post("/", createOutboundRecord);
 
-router.post("/confirm", confirmOutboundRecord);
+router.get("/", protectRoute, getOutboundRecords);
+router.get("/pending", protectRoute, getPendingOutboundRecords);
+router.post("/", protectRoute, createOutboundRecord);
 
+// 🔥 REQUIRED
+router.post("/confirm", protectRoute, confirmOutboundRecord);
 
 export default router;

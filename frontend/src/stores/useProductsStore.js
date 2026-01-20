@@ -8,16 +8,19 @@ export const useProductsStore = create((set) => ({
   error: null,
 
   fetchProducts: async () => {
-    set({ loading: true, error: null });
-    try {
-      const res = await axios.get("/products");
-      set({ products: res.data, loading: false });
-    } catch (err) {
-      const message = err.response?.data?.message || "Failed to fetch products";
-      toast.error(message); // show toast
-      set({ error: message, loading: false });
-    }
-  },
+  set({ loading: true, error: null });
+  try {
+    const res = await axios.get("/products");
+
+    // ✅ DO NOT FILTER HERE
+    set({ products: res.data, loading: false });
+  } catch (err) {
+    const message = err.response?.data?.message || "Failed to fetch products";
+    toast.error(message);
+    set({ error: message, loading: false });
+  }
+},
+
 
   addProduct: async (productData) => {
     set({ loading: true, error: null });
@@ -68,16 +71,18 @@ export const useProductsStore = create((set) => ({
   },
 
   getProductDropDown: async () => {
-    set({ loading: true, error: null });
-    try {
-      const res = await axios.get("/products/dropdown");
-      set({ products: res.data, loading: false });
-    } catch (err) {
-      const message = err.response?.data?.message || "Failed to fetch products for dropdown";
-      toast.error(message); // show toast
-      set({ error: message, loading: false });
-    }
-  },
+  set({ loading: true, error: null });
+  try {
+    const res = await axios.get("/products/dropdown");
+    set({ products: res.data, loading: false });
+  } catch (err) {
+    const message =
+      err.response?.data?.message || "Failed to fetch products for dropdown";
+    toast.error(message);
+    set({ error: message, loading: false });
+  }
+},
+
 
   clearError: () => set({ error: null }),
 }));

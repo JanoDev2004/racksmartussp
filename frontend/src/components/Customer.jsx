@@ -71,7 +71,7 @@ const Customer = () => {
                       Packing No: {r.packingNumber}
                     </p>
                     <p className="text-xs text-gray-500">
-                      Date:{" "}
+                      Delivery Date:{" "}
                       {r.date
                         ? new Date(r.date).toLocaleString("en-GB", {
                             day: "2-digit",
