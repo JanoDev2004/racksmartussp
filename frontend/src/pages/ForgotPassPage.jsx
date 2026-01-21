@@ -1,114 +1,72 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Mail, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import axios from "../lib/axios";
+import { toast } from "react-hot-toast";
 
-const ForgetPassword = () => {
-  const [username, setUsername] = useState("");
+const ForgotPassPage = () => {
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!username) {
-      alert("Please enter your username");
-      return;
-    }
-    setLoading(true);
+    if (!email) return toast.error("Email is required");
 
-    // Simulate sending reset link
-    setTimeout(() => {
+    try {
+      setLoading(true);
+      await axios.post("/auth/forgot-password", { email });
+      toast.success("Password reset link sent to your email");
+      setEmail("");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to send reset link");
+    } finally {
       setLoading(false);
-      // Redirect to ResetPassword page
-      navigate("/reset-password", { state: { username } });
-    }, 1000);
+    }
   };
 
   return (
-    <>
-      <link
-        href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"
-        rel="stylesheet"
-      />
+    <div className="min-h-screen flex items-center justify-center p-6 relative">
+      <motion.div className="bg-white rounded-3xl shadow-2xl p-12 w-full max-w-md">
+        <h2 className="text-2xl font-bold text-center mb-2">Forgot Password</h2>
+        <p className="text-center text-gray-600 mb-8">
+          Enter your email and we’ll send a reset link.
+        </p>
 
-      <div
-        className="min-h-screen flex items-center justify-center p-6 relative"
-        style={{
-          backgroundImage: "url('/final background (1).png')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          fontFamily: "'Poppins', sans-serif",
-        }}
-      >
-        <div className="absolute inset-0 bg-black/50" />
-
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-          className="relative z-10 bg-white rounded-3xl shadow-2xl p-12 w-full max-w-md"
-        >
-          <motion.img
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.5 }}
-            src="/updated_logo-removebg-preview.png"
-            alt="RackSmart"
-            className="h-28 mx-auto mb-8"
-          />
-
-          <h2 className="text-2xl font-bold text-gray-800 text-center mb-2">
-            Forgot Password?
-          </h2>
-          <p className="text-gray-600 text-center mb-8">
-            Enter your username and we'll send you a reset link.
-          </p>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-gray-700 font-semibold mb-2">
-                Username
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter your username"
-                  className="w-full pl-12 pr-5 py-5 rounded-xl border border-gray-300 focus:outline-none focus:ring-4 focus:ring-orange-400 focus:border-orange-500 transition-all"
-                  required
-                />
-              </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="font-semibold">Email</label>
+            <div className="relative">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-12 py-4 border rounded-xl"
+                placeholder="Enter your email"
+                required
+              />
             </div>
-
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              type="submit"
-              disabled={loading}
-              className="w-full bg-[#fa6709] hover:bg-[#e55a00] text-white font-bold py-5 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-            >
-              {loading ? "Sending Link..." : (
-                <>
-                  <Mail className="w-5 h-5" /> Send Reset Link
-                </>
-              )}
-            </motion.button>
-          </form>
-
-          <div className="mt-8 text-center">
-            <button
-              onClick={() => navigate("/login")}
-              className="text-orange-600 font-medium hover:underline flex items-center gap-2 mx-auto"
-            >
-              <ArrowLeft className="w-4 h-4" /> Back to Login
-            </button>
           </div>
-        </motion.div>
-      </div>
-    </>
+
+          <button
+            disabled={loading}
+            className="w-full bg-orange-600 text-white py-4 rounded-xl"
+          >
+            {loading ? "Sending..." : "Send Reset Link"}
+          </button>
+        </form>
+
+        <button
+          onClick={() => navigate("/login")}
+          className="mt-6 flex items-center gap-2 text-orange-600 mx-auto"
+        >
+          <ArrowLeft size={16} /> Back to Login
+        </button>
+      </motion.div>
+    </div>
   );
 };
 
-export default ForgetPassword;
+export default ForgotPassPage;

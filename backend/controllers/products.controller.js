@@ -1,11 +1,17 @@
 import Product from "../models/products.model.js";
+import { logProductAction } from "./actionLogManagement.controller.js";
 
 /**
  * CREATE product
  */
 export const createProduct = async (req, res) => {
   try {
+    const userId = req.user._id; // ID of user performing the action
     const product = await Product.create(req.body);
+
+    // Log action
+    await logProductAction({ userId, product, action: "add" });
+
     res.status(201).json(product);
   } catch (error) {
     res.status(400).json({
@@ -55,6 +61,7 @@ export const getProductById = async (req, res) => {
  */
 export const updateProduct = async (req, res) => {
   try {
+    const userId = req.user._id; // ID of user performing the action
     const product = await Product.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -64,6 +71,9 @@ export const updateProduct = async (req, res) => {
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
+
+    // Log action
+    await logProductAction({ userId, product, action: "update" });
 
     res.status(200).json(product);
   } catch (error) {
@@ -79,11 +89,15 @@ export const updateProduct = async (req, res) => {
  */
 export const deleteProduct = async (req, res) => {
   try {
+    const userId = req.user._id; // ID of user performing the action
     const product = await Product.findByIdAndDelete(req.params.id);
 
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
+
+    // Log action
+    await logProductAction({ userId, product, action: "delete" });
 
     res.status(200).json({ message: "Product deleted successfully" });
   } catch (error) {
@@ -94,6 +108,9 @@ export const deleteProduct = async (req, res) => {
   }
 };
 
+/**
+ * GET products for dropdown (non-archived)
+ */
 export const getProductsForDropdown = async (req, res) => {
   try {
     const products = await Product.find(
@@ -109,5 +126,33 @@ export const getProductsForDropdown = async (req, res) => {
     res.json(products);
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * ARCHIVE product
+ */
+export const archiveProduct = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const product = await Product.findByIdAndUpdate(
+      req.params.id,
+      { archived: true },
+      { new: true }
+    );
+
+    if (!product) return res.status(404).json({ message: "Product not found" });
+
+    // Log action
+    if (userId) {
+      await logProductAction({ userId, product, action: "archive" });
+    }
+
+    res.status(200).json(product);
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to archive product",
+      error: error.message,
+    });
   }
 };

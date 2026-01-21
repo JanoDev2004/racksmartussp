@@ -6,10 +6,10 @@ import { useProductsStore } from "../stores/useProductsStore";
 const OutboundRecord = () => {
   // ================= ZUSTAND STORES =================
   const {
-    outboundRecords,
-    fetchOutboundRecords,
-    addOutboundRecord,
-    confirmOutboundRecord,
+    pendingOutboundPackingLists,
+    fetchPendingOutboundPackingLists,
+    createOutboundRecord,
+    confirmOutbound,
     loading,
   } = useOutboundStore();
 
@@ -25,6 +25,7 @@ const OutboundRecord = () => {
   const [address, setAddress] = useState("");
   const [contactPerson, setContactPerson] = useState("");
   const [date, setDate] = useState("");
+  const [dispatchDate, setDispatchDate] = useState("");
   const [referenceDocs, setReferenceDocs] = useState("");
   const [purchaseOrderNo, setPurchaseOrderNo] = useState("");
   const [deliveryReceipt, setDeliveryReceipt] = useState("");
@@ -38,10 +39,9 @@ const OutboundRecord = () => {
 
   // ================= LOAD DATA =================
   useEffect(() => {
-    fetchOutboundRecords();
-    getProductDropDown(); // ✅ get products for dropdown
+    fetchPendingOutboundPackingLists();
+    getProductDropDown();
   }, []);
-
   // ================= ADD ITEM =================
   const handleAddItem = () => {
     if (!selectedProduct || !productQty || Number(productQty) <= 0) return;
@@ -87,6 +87,7 @@ const OutboundRecord = () => {
       address,
       contactPerson,
       date,
+      dispatchDate,
       referenceDocs,
       purchaseOrderNo,
       deliveryReceipt,
@@ -96,7 +97,7 @@ const OutboundRecord = () => {
       items,
     };
 
-    const res = await addOutboundRecord(payload);
+    const res = await createOutboundRecord(payload);
     if (res.success) {
       alert("Outbound record saved successfully!");
       setPackingNumber("");
@@ -104,6 +105,7 @@ const OutboundRecord = () => {
       setAddress("");
       setContactPerson("");
       setDate("");
+      setDispatchDate("");
       setReferenceDocs("");
       setPurchaseOrderNo("");
       setDeliveryReceipt("");
@@ -118,13 +120,33 @@ const OutboundRecord = () => {
 
   const handleConfirm = async (record) => {
     const confirmItems = record.items.map((i) => ({ ...i, actualQty: i.qty }));
-    const res = await confirmOutboundRecord(record.packingNumber, confirmItems);
+    const res = await confirmOutbound({
+      packingNumber: record.packingNumber,
+      items: confirmItems,
+    });
     if (res.success) {
       alert("Outbound record confirmed!");
     } else {
       alert(res.message);
     }
   };
+
+  const handleSelectPendingPL = (record) => {
+  setPackingNumber(record.packingNumber);
+  setConsignee(record.consignee);
+  setAddress(record.address || "");
+  setContactPerson(record.contactPerson || "");
+  setDate(record.date ? new Date(record.date).toISOString().split("T")[0] : "");
+  setDispatchDate(record.dispatchDate ? new Date(record.dispatchDate).toISOString().split("T")[0] : "");
+  setReferenceDocs(record.referenceDocs || "");
+  setPurchaseOrderNo(record.purchaseOrderNo || "");
+  setDeliveryReceipt(record.deliveryReceipt || "");
+  setServiceInvoice(record.serviceInvoice || "");
+  setRemarks(record.remarks || "");
+  setPreparedBy(record.preparedBy || "");
+  setItems(record.items.map(i => ({ ...i })));
+};
+
 
   // ================= UI =================
   return (
@@ -166,6 +188,12 @@ const OutboundRecord = () => {
                   label: "Dispatch Date",
                   value: date,
                   setter: setDate,
+                  type: "date",
+                },
+                {
+                  label: "Delivery Date",
+                  value: dispatchDate,
+                  setter: setDispatchDate,
                   type: "date",
                 },
                 {
@@ -339,43 +367,43 @@ const OutboundRecord = () => {
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-xl shadow">
             <h5 className="text-gray-700 font-bold border-b pb-1 mb-4">
-              Saved Outbound Records
+              Pending Packing Lists
             </h5>
 
             {loading ? (
               <p className="text-center text-gray-400 py-10">Loading...</p>
-            ) : outboundRecords.length === 0 ? (
+            ) : pendingOutboundPackingLists.length === 0 ? (
               <p className="text-center text-gray-400 py-20 text-sm">
-                No saved records
+                No pending packing lists
               </p>
             ) : (
-              outboundRecords.map((record) => (
-                <div
-                  key={record._id}
-                  className="border rounded-lg p-4 mb-3 bg-gray-50 shadow-sm"
-                >
-                  <div className="flex justify-between items-center mb-2">
-                    <p className="text-xs font-bold text-blue-600">
-                      {record.packingNumber}
-                    </p>
-                    <p className="text-sm font-semibold">{record.consignee}</p>
+              pendingOutboundPackingLists.map((record) =>   {
+                return (
+                  <div
+                    key={record._id}
+                    className="border rounded-lg p-4 mb-3 transition"
+                  >
+                    <div className="flex justify-between items-center mb-2">
+                      <p className="text-xs font-bold text-blue-600">
+                        {record.packingNumber}
+                      </p>
+                      <p className="text-sm font-semibold">{record.consignee}</p>
+                    </div>
+                    <div className="text-xs text-gray-500 mb-2">
+                      {record.date && <p>Dispatch: {new Date(record.date).toLocaleDateString()}</p>}
+                      {record.dispatchDate && <p>Delivery: {new Date(record.dispatchDate).toLocaleDateString()}</p>}
+                      <p>Created: {new Date(record.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <ul className="text-xs list-disc list-inside mb-3">
+                      {record.items.map((item, i) => (
+                        <li key={i}>
+                          {item.qty} {item.uom} – {item.itemCode}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-
-                  <p className="text-xs text-gray-500 mb-2">
-                    {record.date
-                      ? new Date(record.date).toLocaleDateString()
-                      : "—"}
-                  </p>
-
-                  <ul className="text-xs list-disc list-inside mb-2">
-                    {record.items.map((item, i) => (
-                      <li key={i}>
-                        {item.qty} {item.uom} – {item.itemCode} 
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

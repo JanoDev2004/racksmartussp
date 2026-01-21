@@ -4,74 +4,105 @@ import axios from "../lib/axios";
 export const useOutboundStore = create((set, get) => ({
   // ================= STATE =================
   outboundRecords: [],
-  products: [],
+  pendingOutboundPackingLists: [],
   loading: false,
   error: null,
 
-  // ================= FETCH ALL OUTBOUND RECORDS =================
+  // ================= FETCH ALL OUTBOUND =================
   fetchOutboundRecords: async () => {
     set({ loading: true, error: null });
     try {
       const res = await axios.get("/outbound");
-      set({ outboundRecords: res.data, loading: false });
+      set({ outboundRecords: res.data || [], loading: false });
     } catch (err) {
-      set({ error: err.response?.data?.message || err.message, loading: false });
+      set({
+        error: err.response?.data?.message || "Failed to load outbound records",
+        loading: false,
+      });
     }
   },
 
-  // ================= FETCH PRODUCTS FOR DROPDOWN =================
-  fetchProducts: async () => {
+  // ================= FETCH PENDING PACKING LISTS =================
+  fetchPendingOutboundPackingLists: async () => {
     set({ loading: true, error: null });
     try {
-      const res = await axios.get("/products"); // Correct endpoint
-      set({ products: res.data, loading: false });
+      const res = await axios.get("/outbound/pending");
+      set({ pendingOutboundPackingLists: res.data || [], loading: false });
     } catch (err) {
-      set({ error: err.response?.data?.message || err.message, loading: false });
+      set({
+        error:
+          err.response?.data?.message ||
+          "Failed to load pending outbound packing lists",
+        loading: false,
+      });
     }
   },
 
-  // ================= CREATE NEW OUTBOUND RECORD =================
-  addOutboundRecord: async (data) => {
+  // ================= CREATE OUTBOUND RECORD =================
+  createOutboundRecord: async (payload) => {
     set({ loading: true, error: null });
+
     try {
-      const res = await axios.post("/outbound", data);
+      const res = await axios.post("/outbound", payload);
+
+      // ✅ Same pattern as inbound
       set((state) => ({
         outboundRecords: [res.data.outbound, ...state.outboundRecords],
+        pendingOutboundPackingLists: [
+          res.data.outbound,
+          ...state.pendingOutboundPackingLists,
+        ],
         loading: false,
       }));
-      return { success: true, outbound: res.data.outbound };
+
+      return { success: true, data: res.data.outbound };
     } catch (err) {
-      set({ error: err.response?.data?.message || err.message, loading: false });
-      return {
-        success: false,
-        message: err.response?.data?.message || err.message,
-      };
+      const message =
+        err.response?.data?.message || "Failed to create outbound record";
+      set({ error: message, loading: false });
+      return { success: false, message };
     }
   },
 
-  // ================= CONFIRM OUTBOUND RECORD =================
-  confirmOutboundRecord: async (packingNumber, items) => {
+  // ================= CONFIRM OUTBOUND =================
+  confirmOutbound: async ({ packingNumber, items }) => {
     set({ loading: true, error: null });
-    try {
-      const res = await axios.post("/outbound/confirm", { packingNumber, items });
 
-      // Update the specific record in the store
+    try {
+      await axios.post("/outbound/confirm", { packingNumber, items });
+
+      // ✅ REMOVE confirmed PL from pending list (IDENTICAL to inbound)
       set((state) => ({
-        outboundRecords: state.outboundRecords.map((record) =>
-          record.packingNumber === packingNumber
-            ? res.data.outbound
-            : record
-        ),
+        pendingOutboundPackingLists:
+          state.pendingOutboundPackingLists.filter(
+            (pl) => pl.packingNumber !== packingNumber
+          ),
         loading: false,
       }));
 
-      return { success: true, outbound: res.data.outbound };
+      return { success: true };
     } catch (err) {
-      set({ error: err.response?.data?.message || err.message, loading: false });
-      return {
-        success: false,
-        message: err.response?.data?.message || err.message,
-      };
+      const message =
+        err.response?.data?.message || "Failed to confirm outbound";
+      set({ error: message, loading: false });
+      return { success: false, message };
     }
+  },
+
+  // ================= GETTERS =================
+  getPackingListByPackingNumber: (packingNumber) => {
+    return get().pendingOutboundPackingLists.find(
+      (pl) => pl.packingNumber === packingNumber
+    );
+  },
+
+  // ================= RESET =================
+  clearOutboundStore: () => {
+    set({
+      outboundRecords: [],
+      pendingOutboundPackingLists: [],
+      loading: false,
+      error: null,
+    });
   },
 }));

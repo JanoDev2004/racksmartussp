@@ -6,7 +6,7 @@ import UserLog from "../models/userLog.js";
 import dotenv from "dotenv";
 import { sendEmail } from "../lib/emailService.js";
 
-const CLIENT_URL = process.env.CLIENT_URL || "https://racksmartussp.site";
+const CLIENT_URL = process.env.CLIENT_URL || "https://localhost:5173";
 
 // ============================
 // VERIFICATION CODE
@@ -119,13 +119,13 @@ const setCookies = (res, accessToken, refreshToken) => {
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: "lax",
     maxAge: 15 * 60 * 1000,
   });
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 };

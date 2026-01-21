@@ -21,6 +21,7 @@ const ProductManagement = () => {
     fetchProducts,
     addProduct,
     updateProduct,
+    deleteProduct,
   } = useProductsStore();
 
   const [showModal, setShowModal] = useState(false);
@@ -262,25 +263,50 @@ const ProductManagement = () => {
                     <td className="p-3 whitespace-normal wrap-break-word">{p.accountTo || "—"}</td>
                     <td className="p-3 whitespace-normal">{p.uom || "—"}</td>
                     <td className="p-3 text-center">
-                      <div className="flex justify-center gap-2">
-                        {!showArchived && (
-                          <button
-                            onClick={() => handleEdit(p)}
-                            className="text-blue-600 hover:text-blue-800 font-bold text-sm"
-                          >
-                            Edit
-                          </button>
-                        )}
-                        <button
-                          onClick={() => toggleArchive(p)}
-                          className={`px-3 py-1 rounded text-xs text-white ${
-                            showArchived ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"
-                          }`}
-                        >
-                          {showArchived ? "Unarchive" : "Archive"}
-                        </button>
-                      </div>
-                    </td>
+  <div className="flex justify-center gap-2">
+
+    {/* EDIT (Active only) */}
+    {!showArchived && (
+      <button
+        onClick={() => handleEdit(p)}
+        className="text-blue-600 hover:text-blue-800 font-bold text-sm"
+      >
+        Edit
+      </button>
+    )}
+
+    {/* ARCHIVE / UNARCHIVE */}
+    <button
+      onClick={() => toggleArchive(p)}
+      className={`px-3 py-1 rounded text-xs text-white ${
+        showArchived
+          ? "bg-green-600 hover:bg-green-700"
+          : "bg-blue-600 hover:bg-blue-700"
+      }`}
+    >
+      {showArchived ? "Unarchive" : "Archive"}
+    </button>
+
+    {/* 🔥 PERMANENT DELETE — ARCHIVED ONLY */}
+    {showArchived && (
+      <button
+        onClick={() => {
+          if (
+            window.confirm(
+              "⚠️ PERMANENT DELETE\n\nThis product is archived.\nThis action cannot be undone.\n\nContinue?"
+            )
+          ) {
+            deleteProduct(p._id);
+          }
+        }}
+        className="px-3 py-1 rounded text-xs font-bold text-white
+                   bg-red-600 hover:bg-red-700"
+      >
+        Delete Permanently
+      </button>
+    )}
+  </div>
+</td>
                   </tr>
                 ))
               ) : (

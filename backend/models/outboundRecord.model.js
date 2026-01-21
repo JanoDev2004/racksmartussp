@@ -46,6 +46,9 @@ const outboundRecordSchema = new mongoose.Schema(
     date: {
       type: Date,
     },
+    dispatchDate: {
+      type: Date,
+    },
     referenceDocs: {
       type: String,
       trim: true,
@@ -70,6 +73,16 @@ const outboundRecordSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+
+    // NEW FIELDS
+    confirmedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    confirmedAt: {
+      type: Date,
+    },
+    
     items: {
       type: [outboundItemSchema],
       required: true,

@@ -6,7 +6,7 @@ const OutboundStock = () => {
   const {
     outboundRecords,
     fetchOutboundRecords,
-    confirmOutboundRecord,
+    confirmOutbound,
     loading,
   } = useOutboundStore();
 
@@ -44,7 +44,7 @@ const OutboundStock = () => {
   const handleConfirm = async () => {
     if (!selectedPL) return;
 
-    const result = await confirmOutboundRecord(selectedPL, items);
+    const result = await confirmOutbound({ packingNumber: selectedPL, items });
     if (result.success) {
       alert("Outbound confirmed!");
       setSelectedPL("");
@@ -55,7 +55,13 @@ const OutboundStock = () => {
   };
 
   // Pending packing lists
-  const pendingRecords = outboundRecords.filter((r) => r.status === "Pending");
+  const pendingRecords = outboundRecords
+  .filter((r) => r.status === "Pending")
+  .sort((a, b) => {
+    if (!a.date) return 1;
+    if (!b.date) return -1;
+    return new Date(a.date) - new Date(b.date);
+  });
 
   return (
     <main className="px-4 md:px-6 py-6 font-sans bg-gray-100 min-h-screen">
@@ -184,6 +190,9 @@ const OutboundStock = () => {
                 <p className="text-xs font-bold text-blue-600">{r.packingNumber}</p>
                 <p className="font-bold text-gray-800">{r.consignee}</p>
                 <p className="text-xs text-gray-500">{r.status}</p>
+                {r.date && <p className="text-xs text-gray-400">Dispatch: {new Date(r.date).toLocaleDateString()}</p>}
+                {r.dispatchDate && <p className="text-xs text-gray-400">Delivery: {new Date(r.dispatchDate).toLocaleDateString()}</p>}
+                <p className="text-xs text-gray-400">Created: {new Date(r.createdAt).toLocaleDateString()}</p>
               </div>
             ))
           )}

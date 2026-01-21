@@ -74,6 +74,12 @@ const InboundStock = () => {
     }
   };
 
+  const sortedPendingPackingLists = [...pendingPackingLists].sort((a, b) => {
+    if (!a.deliveryDate) return 1;
+    if (!b.deliveryDate) return -1;
+    return new Date(a.deliveryDate) - new Date(b.deliveryDate);
+  });
+
   return (
     <main className="px-4 md:px-6 py-6 font-sans bg-gray-100 min-h-screen">
       {/* ================= HEADER ================= */}
@@ -204,24 +210,46 @@ const InboundStock = () => {
             Pending Packing Lists
           </h5>
 
-          {pendingPackingLists.length === 0 ? (
-            <p className="text-center text-gray-400 py-20 text-sm">
-              No pending packing lists
-            </p>
-          ) : (
-            pendingPackingLists.map((pl) => (
+          {sortedPendingPackingLists.map((pl) => {
+            const isSelected = selectedPL === pl.containerNumber;
+
+            return (
               <div
                 key={pl.containerNumber}
-                className="border rounded-lg p-3 mb-3 bg-gray-50"
+                onClick={() => handleSelectPL(pl.containerNumber)}
+                className={`border rounded-lg p-3 mb-3 cursor-pointer transition
+        ${
+          isSelected
+            ? "border-blue-600 bg-blue-100"
+            : "bg-gray-50 hover:bg-blue-50"
+        }
+      `}
               >
                 <p className="text-xs font-bold text-blue-600">
-                  {pl.containerNumber}
+                  Container Number: {pl.containerNumber}
                 </p>
-                <p className="font-bold text-gray-800">{pl.poNumber}</p>
-                <p className="text-xs text-gray-500">{pl.supplier}</p>
+
+                <p className="font-bold text-gray-800">
+                  Delivery Date:{" "}
+                  {pl.deliveryDate
+                    ? new Date(pl.deliveryDate).toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })
+                    : "N/A"}
+                </p>
+
+                <p className="font-bold text-gray-800">
+                  PO Number: {pl.poNumber}
+                </p>
+
+                <p className="font-bold text-gray-800">
+                  Supplier: {pl.supplier.toUpperCase()}
+                </p>
               </div>
-            ))
-          )}
+            );
+          })}
         </div>
       </div>
     </main>

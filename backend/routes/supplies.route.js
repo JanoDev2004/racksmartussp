@@ -6,7 +6,9 @@ import {
   createSupply,
   updateSupply,
   deleteSupply,
+  archiveSupply,
 } from "../controllers/supplies.controller.js";
+import { protectRoute } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
@@ -17,12 +19,15 @@ router.get("/", getAllSupplies);
 router.get("/:id", getSupplyById);
 
 // CREATE a new supply
-router.post("/", createSupply);
+router.post("/", protectRoute, createSupply);
 
 // UPDATE a supply by ID
-router.put("/:id", updateSupply);
+router.put("/:id", protectRoute, updateSupply);
 
 // DELETE a supply by ID
-router.delete("/:id", deleteSupply);
+router.delete("/:id", protectRoute, deleteSupply);
+
+// ARCHIVE a supply by ID
+router.patch("/:id/archive", protectRoute, archiveSupply);
 
 export default router;
